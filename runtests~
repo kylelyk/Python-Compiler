@@ -1,0 +1,18 @@
+for name in $(find tests -type f -name "*.py");
+do
+	asm=${name%.*}.s
+	python compile.py $name
+	gcc $asm runtime.a -lm -m32 -o ${name%.*}
+	compiledoutput=$(cat tests/input.txt | ./${name%.*})
+	correctoutput=$(cat tests/input.txt | python $name)
+	#echo $name "->" $asm
+	#echo "Compiled: " $compiledoutput
+	#echo "Correct:  " $correctoutput
+	if [ $compiledoutput = $correctoutput ]
+  then
+		echo Succeeded: $name
+	else
+		echo Failed: $name. Expected $correctoutput but got $compiledoutput.
+	fi
+		
+done

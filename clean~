@@ -1,0 +1,7 @@
+for name in $(find tests -type f \( -name "*.s" -or ! -name "*.*" \));
+do
+
+	echo rm $name
+	rm $name
+done
+
