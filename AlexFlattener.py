@@ -26,11 +26,11 @@ def flat_h(highvar, newAst, oldAst):
 		return (name, newAst)
 
 	if isinstance(oldAst, Printnl):
-		(n_hivar, n_newAst) = flat_h(highvar, newAst, oldAst.nodes)		
-		n_printNode = Printnl(n_hivar, oldAst.dest)
+		(n_highvar, n_newAst) = flat_h(highvar, newAst, oldAst.nodes)		
+		n_printNode = Printnl(n_highvar, oldAst.dest)
 		stmtNode = n_newAst.node.nodes
 		stmtNode.append(n_printNode)
-		return (n_hivar, n_newAst)
+		return (n_highvar, n_newAst)
  	
 	#The last variable returned should be the AssName
 	if isinstance(oldAst, Assign):
