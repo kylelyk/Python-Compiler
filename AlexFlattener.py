@@ -5,7 +5,8 @@ def make_assign(name, expr)
 	return Assign(AssName(name, "OP_ASSIGN"),expr)
 
 def flat_h(highvar, newAst, oldAst):
-#returns the last variable assigned, and the updated new AST.
+#returns the last variable assigned and the updated new AST.
+#oldAst should not change
 
 	if isinstance(oldAst, Module):
 		return flat_h(highvar, newAst, oldAst.node) 
