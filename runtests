@@ -9,7 +9,7 @@ do
 	#echo "Compiled: " $compiledoutput
 	#echo "Correct:  " $correctoutput
 	if [ "$compiledoutput" = "$correctoutput" ]
-  then
+	then
 		echo Succeeded: $name
 	else
 		echo Failed: $name. Expected $correctoutput but got $compiledoutput.
