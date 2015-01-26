@@ -1,5 +1,8 @@
 CFLG=-O3 -Wall
 
+#runtime.o: runtime.o hashtable.o hashtable_itr.o hashtable_utility.o
+#	gcc 
+
 runtime.a: runtime.o hashtable.o hashtable_itr.o hashtable_utility.o
 	ar -rcs $@ $^
 

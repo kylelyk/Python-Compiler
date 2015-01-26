@@ -1,4 +1,4 @@
-import compiler, sys, re, astpp
+import compiler, sys, re, astpp, os
 from compiler.ast import *
 
 class GenSym:
@@ -105,6 +105,8 @@ def addStmt(node, newast, gen, map, name = None):
 	if not name:
 		name = gen.inc().name()
 		map[name] = len(map)
+	elif name not in map:
+		map[name] = len(map)
 	newnode = Assign([AssName(name, 'OP_ASSIGN')], node)
 	newast.nodes.append(newnode)
 	return Name(name)
@@ -141,11 +143,10 @@ def flatAdd(ast, newast, gen, map):
 
 def flatDiscard(ast, newast, gen, map):
 	simple = flatten(ast.expr, newast, gen, map)
-	return 0#addStmt(Discard(simple), newast, gen, map)
+	return 0
 
 def flatAssign(ast, newast, gen, map):
 	simple = flatten(ast.expr, newast, gen, map)
-	map[ast.nodes[0].name] = len(map)
 	return addStmt(simple, newast, gen, map, ast.nodes[0].name)
 
 def flatCallFunc(ast, newast, gen, map):
@@ -203,7 +204,7 @@ def toAsmAdd(ast, asm, map):
 
 def toAsmAssign(ast, asm, map):
 	pyToAsm(ast.expr, asm, map)
-	asm.append(Movl(None, None, "%ebx", getStackLoc(ast.nodes[0].name, map), None, "%ebp"))
+	asm.append(Movl(None, None, "%ebx", getStackLoc(ast.nodes[0].name, map), None, "%ebp","Assigning "+ast.nodes[0].name))
 
 def toAsmName(ast, asm, map):
 	moveInto(ast, "%ebx", asm, map)
@@ -229,52 +230,22 @@ def compile(ast):
 	map = {}
 	state = ()
 	newast = flatten(ast, None, gen, map)
+	print map
 	asm = []
 	asm.append(Pushl(reg="%ebp"))
 	asm.append(Movl(reg1="%esp", reg2="%ebp"))
 	asm.append(Subl(const1=len(map)*4, reg2="%esp"))
 	asm.append(Newline())
-	'''pushl %ebp
-movl %esp, %ebp
-subl $12,%esp
-	'''
-	#print "\n\nNew AST:"
-	#print newast
-	#astpp.printAst(newast)
 	pyToAsm(newast, asm, map)
 	asm.append(Movl(const1=0, reg2="%eax"))
 	asm.append(Leave())
 	asm.append(Ret())
-	#print "\n\nASM:"
-	f = open(re.split("\.", sys.argv[1])[0]+".s", "w")
+
+	f = open(re.split("\.[^\.]*$", sys.argv[1])[0]+".s", "w")
 	f.write(".globl main\nmain:\n")
 	for instr in asm:
 		f.write(str(instr)+"\n")
-	output = '''.globl main
-main:
-	pushl %ebp
-	movl %esp, %ebp
-	leave
-	ret
-	'''
-	output = '''.globl main
-main:
-	pushl %ebp
-	movl %esp, %ebp
-	subl $4, %esp
-	call input
-	negl %eax
-	movl %eax, -4(%ebp)
-	call input
-	addl -4(%ebp), %eax
-	pushl %eax
-	call print_int_nl
-	addl $4, %esp
-	movl $0, %eax
-	leave
-	ret
-	'''
-	
+        
 	f.close()
 
 if len(sys.argv) != 2:
