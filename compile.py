@@ -1,5 +1,6 @@
-import compiler, sys, re, astpp, os
+import compiler, sys, re, astpp, os, warnings
 from compiler.ast import *
+
 
 class GenSym:
 	def __init__(self):
@@ -101,7 +102,7 @@ class Newline():
 	def __str__(self):
 		return addComment(self.comment)
 
-def addStmt(node, newast, gen, map, name = None):
+def addAssign(node, newast, gen, map, name = None):
 	if not name:
 		name = gen.inc().name()
 		map[name] = len(map)
@@ -123,7 +124,7 @@ def flatStmt(ast, newast, gen, map):
 def flatPrintnl(ast, newast, gen, map):
 	simple = flatten(ast.nodes[0], newast, gen, map)
 	return newast.nodes.append(Printnl([simple], None))
-	
+
 def flatConst(ast, newast, gen, map):
 	return ast
 
@@ -134,23 +135,22 @@ def flatUnarySub(ast, newast, gen, map):
 	simple = flatten(ast.expr, newast, gen, map)
 	if isinstance(simple, Const):
 		return Const(-simple.value)
-	return addStmt(UnarySub(simple), newast, gen, map)
+	return addAssign(UnarySub(simple), newast, gen, map)
 
 def flatAdd(ast, newast, gen, map):
 	s1 = flatten(ast.left, newast, gen, map)
 	s2 = flatten(ast.right, newast, gen, map)
-	return addStmt(Add((s1, s2)), newast, gen, map)
+	return addAssign(Add((s1, s2)), newast, gen, map)
 
 def flatDiscard(ast, newast, gen, map):
-	simple = flatten(ast.expr, newast, gen, map)
-	return 0
+	return flatten(ast.expr, newast, gen, map)
 
 def flatAssign(ast, newast, gen, map):
 	simple = flatten(ast.expr, newast, gen, map)
-	return addStmt(simple, newast, gen, map, ast.nodes[0].name)
+	return addAssign(simple, newast, gen, map, ast.nodes[0].name)
 
 def flatCallFunc(ast, newast, gen, map):
-	return addStmt(ast, newast, gen, map)
+	return addAssign(ast, newast, gen, map)
 
 def flatten(ast, newast, gen, map):
 	return {
@@ -230,7 +230,6 @@ def compile(ast):
 	map = {}
 	state = ()
 	newast = flatten(ast, None, gen, map)
-	print map
 	asm = []
 	asm.append(Pushl(reg="%ebp"))
 	asm.append(Movl(reg1="%esp", reg2="%ebp"))
@@ -240,18 +239,18 @@ def compile(ast):
 	asm.append(Movl(const1=0, reg2="%eax"))
 	asm.append(Leave())
 	asm.append(Ret())
-
+	
 	f = open(re.split("\.[^\.]*$", sys.argv[1])[0]+".s", "w")
 	f.write(".globl main\nmain:\n")
 	for instr in asm:
 		f.write(str(instr)+"\n")
-        
+	
 	f.close()
 
 if len(sys.argv) != 2:
 	print "Name of file is required"
 	sys.exit(1)
-	
+
 
 ast = compiler.parseFile(sys.argv[1])
 compile(ast)
