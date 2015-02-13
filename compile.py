@@ -1,5 +1,7 @@
-import compiler, sys, re, astpp, os, warnings
+import compiler, sys, re, astpp, os
 from compiler.ast import *
+import flattener
+from x86AST import *
 
 
 class GenSym:
@@ -10,236 +12,124 @@ class GenSym:
 		return self
 	def name(self):
 		return "__$tmp" + str(self.n)
-		
-def addComment(comment):
-	return ("\t\t#" + comment) if comment else ""
+	def invalidName(self):
+		return "__$tmp_invalid"
 
-class TwoArgs(object):
-	def __init__(self, offset1 = None, const1 = None, reg1 = None, offset2 = None, const2 = None, reg2 = None, comment = ""):
-		self.offset1 = offset1
-		self.const1 = const1
-		self.reg1 = reg1
-		self.offset2 = offset2
-		self.const2 = const2
-		self.reg2 = reg2
-		self.comment = comment
-	def setName(self, name):
-		self.name = name
-	def __str__(self):
-		ret = "\t" + self.name + " "
-		ret += ("$" + str(self.const1)) if self.const1 is not None else (str(self.offset1) + "(" + self.reg1 + ")" if self.offset1 else self.reg1)
-		ret += ", "
-		ret += ("$" + str(self.const2)) if self.const2 is not None else (str(self.offset2) + "(" + self.reg2 + ")" if self.offset2 else self.reg2)
-		ret += addComment(self.comment)
-		return  ret
+def condAdd(set, elm):
+	if elm is not None and elm[0] != "%":
+		set.add(elm)
 
-class Movl(TwoArgs):
-	def __init__(self, offset1 = None, const1 = None, reg1 = None, offset2 = None, const2 = None, reg2 = None, comment = ""):
-		super(Movl, self).__init__(offset1, const1, reg1, offset2, const2, reg2, comment)
-		self.setName("movl")
+def liveOneArg(instr, prev):
+	s = set([])
+	#All instructions read from the var but negl and pushl writes to the var
+	if not isinstance(instr, Pushl):
+		s.discard(instr.reg)
+	condAdd(s, instr.reg)
+	return s
 
-class Subl(TwoArgs):
-	def __init__(self, offset1 = None, const1 = None, reg1 = None, offset2 = None, const2 = None, reg2 = None, comment = ""):
-		super(Subl, self).__init__(offset1, const1, reg1, offset2, const2, reg2, comment)
-		self.setName("subl")
+def liveTwoArgs(instr, prev):
+	s = set(prev)
+	s.discard(instr.reg2)
+	condAdd(s, instr.reg1)
+	#movl does not read reg2 but addl/subl do
+	if not isinstance(instr, Movl):
+		condAdd(s, instr.reg2)
+	return s
 
-class Addl(TwoArgs):
-	def __init__(self, offset1 = None, const1 = None, reg1 = None, offset2 = None, const2 = None, reg2 = None, comment = ""):
-		super(Addl, self).__init__(offset1, const1, reg1, offset2, const2, reg2, comment)
-		self.setName("addl")
+def liveness(asm):
+	live_after = [set([])]*len(asm)
+	l = len(live_after) - 1
+	for index, instr in enumerate(reversed(asm)):
+		bases = instr.__class__.__bases__
+		if index != l:
+			#compute the liveness of the instruction if it actually does anything to variables
+			#instructions that do not inherit from OneArg or TwoArgs are not considered
+			#and the result is copied from the previous iteration
+			live_after[l-index-1] = {
+				OneArg:  liveOneArg,
+				TwoArgs: liveTwoArgs,
+				}[bases[0]](instr, live_after[l-index]) if len(bases) else live_after[l-index]
+			#print l-index, instr, live_after[l - index]
 
-class OneArg(object):
-	def __init__(self, offset = None, const = None, reg = None, comment = ""):
-		self.offset = offset
-		self.const = const
-		self.reg = reg
-		self.comment = comment
-	def setName(self, name):
-		self.name = name
-	def __str__(self):
-		ret = "\t" + self.name + " "
-		ret += ("$" + str(self.const) if self.const is not None else (str(self.offset) + "(" + self.reg + ")" if self.offset else self.reg))
-		ret += addComment(self.comment)
-		return  ret
-
-class Pushl(OneArg):
-	def __init__(self, offset = None, const = None, reg = None, comment = ""):
-		super(Pushl, self).__init__(offset, const, reg, comment)
-		self.setName("pushl")
-
-class Popl(OneArg):
-	def __init__(self, offset = None, const = None, reg = None, comment = ""):
-		super(Popl, self).__init__(offset, const, reg, comment)
-		self.setName("popl")
-
-class Negl(OneArg):
-	def __init__(self, offset = None, const = None, reg = None, comment = ""):
-		super(Negl, self).__init__(offset, const, reg, comment)
-		self.setName("negl")
-
-class Call():
-	def __init__(self, name, comment = ""):
-		self.name = name
-		self.comment = comment
-	def __str__(self):
-		return "\tcall " + self.name + addComment(self.comment)
-
-class Leave():
-	def __init__(self, comment = ""):
-		self.comment = comment
-	def __str__(self):
-		return "\tleave" + addComment(self.comment)
-
-class Ret():
-	def __init__(self, comment = ""):
-		self.comment = comment
-	def __str__(self):
-		return "\tret" + addComment(self.comment)
-
-class Newline():
-	def __init__(self, comment = ""):
-		self.comment = comment
-	def __str__(self):
-		return addComment(self.comment)
-
-def addAssign(node, newast, gen, map, name = None):
-	if not name:
-		name = gen.inc().name()
-		map[name] = len(map)
-	elif name not in map:
-		map[name] = len(map)
-	newnode = Assign([AssName(name, 'OP_ASSIGN')], node)
-	newast.nodes.append(newnode)
-	return Name(name)
-
-def flatModule(ast, newast, gen, map):
-	return flatten(ast.node, newast, gen, map)
-
-def flatStmt(ast, newast, gen, map):
-	newast = Stmt([])
-	for node in ast.nodes:
-		flatten(node, newast, gen, map)
-	return newast
-
-def flatPrintnl(ast, newast, gen, map):
-	simple = flatten(ast.nodes[0], newast, gen, map)
-	return newast.nodes.append(Printnl([simple], None))
-
-def flatConst(ast, newast, gen, map):
-	return ast
-
-def flatName(ast, newast, gen, map):
-	return ast
-
-def flatUnarySub(ast, newast, gen, map):
-	simple = flatten(ast.expr, newast, gen, map)
-	if isinstance(simple, Const):
-		return Const(-simple.value)
-	return addAssign(UnarySub(simple), newast, gen, map)
-
-def flatAdd(ast, newast, gen, map):
-	s1 = flatten(ast.left, newast, gen, map)
-	s2 = flatten(ast.right, newast, gen, map)
-	return addAssign(Add((s1, s2)), newast, gen, map)
-
-def flatDiscard(ast, newast, gen, map):
-	return flatten(ast.expr, newast, gen, map)
-
-def flatAssign(ast, newast, gen, map):
-	simple = flatten(ast.expr, newast, gen, map)
-	return addAssign(simple, newast, gen, map, ast.nodes[0].name)
-
-def flatCallFunc(ast, newast, gen, map):
-	return addAssign(ast, newast, gen, map)
-
-def flatten(ast, newast, gen, map):
-	return {
-		Module:   flatModule,
-		Stmt:     flatStmt,
-		Printnl:  flatPrintnl,
-		Const:    flatConst,
-		UnarySub: flatUnarySub,
-		Add:      flatAdd,
-		Discard:  flatDiscard,
-		Assign:   flatAssign,
-		Name:     flatName,
-		CallFunc: flatCallFunc
-	}[ast.__class__](ast, newast, gen, map)
-
-def getStackLoc(key, map):
-	return -(map[key] + 1) * 4
-	
-def moveInto(node, reg, asm, map):
-	if isinstance(node, Const):
-		asm.append(Movl(const1=node.value, reg2=reg))
+def addEdge(u, v, graph):
+	if u in graph:
+		graph[u].add(v)
 	else:
-		asm.append(Movl(getStackLoc(node.name, map), None, "%ebp", None, None, reg))
+		graph[u] = set([v])
 
-def toAsmStmt(ast, asm, map):
-	for n in ast.nodes:
-		pyToAsm(n, asm, map)
-		asm.append(Newline())
+def interfereNegPop(instr, index, liveness, graph):
+	t = instr.reg
+	for v in liveness[index]:
+		if v != t:
+			addEdge(t, v, graph)
 
-def toAsmPrintnl(ast, asm, map):
-	n = ast.nodes[0]
-	if isinstance(n, Const):
-		asm.append(Pushl(const=n.value))
-	else:
-		asm.append(Pushl(getStackLoc(n.name, map), None, "%ebp"))
-	asm.append(Call("print_int_nl"))
-	asm.append(Addl(const1=4, reg2="%esp"))
+def interfereMov(instr, index, liveness, graph):
+	s = instr.reg1
+	t = instr.reg2
+	for v in liveness[index]:
+		if v != t and v != s:
+			addEdge(t, v, graph)
 
-def toAsmConst(ast, asm, map):
-	moveInto(ast, "%ebx", asm, map)
+def interfereAddSub(instr, index, liveness, graph):
+	s = instr.reg1
+	t = instr.reg2
+	for v in liveness[index]:
+		if v != t and v != s:
+			addEdge(t, v, graph)
 
-def toAsmUnarySub(ast, asm, map):
-	moveInto(ast.expr, "%ebx", asm, map)
-	asm.append(Negl(reg="%ebx"))
+def interfereCall(instr, index, liveness, graph):
+	for v in liveness[index]:
+		addEdge("%eax", v, graph)
+		addEdge("%ecx", v, graph)
+		addEdge("%edx", v, graph)
 
-def toAsmAdd(ast, asm, map):
-	moveInto(ast.left, "%eax", asm, map)
-	moveInto(ast.right,"%ebx", asm, map)
-	asm.append(Addl(reg1="%eax", reg2="%ebx"))
-	
+def interfere(asm, liveness):
+	interferePass = lambda(i,n,l,g): pass
+	graph = {}
+	for index, instr in enumerate(asm):
+		{
+			Pushl:   interferePass
+			Popl:    interfereNegPop
+			Negl:    interfereNegPop
+			Movl:    interfereMov
+			Addl:    interfereAddSub
+			Subl:    interfereAddSub
+			Call:    interfereCall
+			Leave:   interferePass
+			Ret:     interferePass
+			Newline: interferePass
+		}[bases[0]](instr, index, liveness, graph)
 
-def toAsmAssign(ast, asm, map):
-	pyToAsm(ast.expr, asm, map)
-	asm.append(Movl(None, None, "%ebx", getStackLoc(ast.nodes[0].name, map), None, "%ebp","Assigning "+ast.nodes[0].name))
-
-def toAsmName(ast, asm, map):
-	moveInto(ast, "%ebx", asm, map)
-
-def toAsmCallFunc(ast, asm, map):
-	asm.append(Call("input"))
-	asm.append(Movl(reg1="%eax",reg2="%ebx"))
-
-def pyToAsm(ast, asm, map):
-	return {
-		Stmt:     toAsmStmt,
-		Printnl:  toAsmPrintnl,
-		Const:    toAsmConst,
-		UnarySub: toAsmUnarySub,
-		Add:      toAsmAdd,
-		Assign:   toAsmAssign,
-		Name:     toAsmName,
-		CallFunc: toAsmCallFunc
-	}[ast.__class__](ast, asm, map)
 
 def compile(ast):
 	gen = GenSym()
 	map = {}
 	state = ()
-	newast = flatten(ast, None, gen, map)
-	asm = []
-	asm.append(Pushl(reg="%ebp"))
+	newast = flattener.flatten(ast, None, gen, map)
+	astpp.printAst(newast)
+	asm = [
+		Movl(const1=4,reg2="z"),
+		Movl(const1=0,reg2="w"),
+		Movl(const1=1,reg2="z"),
+		Movl(reg1="w",reg2="x"),
+		Addl(reg1="z",reg2="x"),
+		Movl(reg1="w",reg2="y"),
+		Addl(reg1="x",reg2="y"),
+		Movl(reg1="y",reg2="w"),
+		Addl(reg1="x",reg2="w"),
+		]
+	'''asm.append(Pushl(reg="%ebp"))
 	asm.append(Movl(reg1="%esp", reg2="%ebp"))
 	asm.append(Subl(const1=len(map)*4, reg2="%esp"))
-	asm.append(Newline())
-	pyToAsm(newast, asm, map)
+	#asm.append(Newline())
+	pyToAsm(newast, None, asm, map)
 	asm.append(Movl(const1=0, reg2="%eax"))
 	asm.append(Leave())
-	asm.append(Ret())
-	
+	asm.append(Ret())'''
+	#for instr in asm:
+	#	print instr
+	liveness(asm)
+	return
 	f = open(re.split("\.[^\.]*$", sys.argv[1])[0]+".s", "w")
 	f.write(".globl main\nmain:\n")
 	for instr in asm:
