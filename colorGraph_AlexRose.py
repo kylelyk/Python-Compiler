@@ -6,7 +6,6 @@
 #5. Whether it's "unspillable", apparently relevant in the third part.
 # Unassigned color is -1, registers are 0-5, memory is 10.
 
-to_mem = 10
 
 '''class color_node:
 
@@ -31,8 +30,11 @@ def choose_next_node(graph, saturation, color):
 
     return next_node
         
-
+#Returns a map, w/ node names as key and color as info.
 def color_graph(graph):
+    
+    #Starting location of "memory"
+    to_mem = 10
 
     #1,2 and 6 are built into the nodes themselves.
 
@@ -52,7 +54,23 @@ def color_graph(graph):
     saturation = {}
     for i in range(len(graph.keys())):
         saturation[graph.keys()[i]] = 0
-
+        
+    
+    reg_color = {"%eax":0 "%ecx": 1 "%edx": 2 "ebx":3 "esi":4 "edi":5}
+    
+    #We color special nodes first, if they exist.
+    #Only first three should be spotted atm, but that can change.
+    for i in range (len(reg_color.keys())):
+        if reg_color.keys[i] in graph:
+            curr_node = graph[reg_color.keys[i]]
+            col = reg_color[reg_color.keys[i]]
+            color[curr_node] = col
+            #Once colored, update the info of its neighbors.
+            adj_list = graph[curr_node][0]
+            for k in range(len(adj_list)):
+                adj_colors[adj_list[k]][col] = True
+                saturation[adj_list[k]] += 1
+        
 
     node_count = len(graph)
 
@@ -75,8 +93,10 @@ def color_graph(graph):
             #If no colors are available, assign to a memory location
             elif col == 5:
                 color[curr_node] = to_mem
-                #Placeholder for memory location name. At the moment, it assigns all the mem locations to "10".
+                to_mem++
+                #Assign to the free memory slot, then increment
 
         node_count -= 1
 
     return color
+
