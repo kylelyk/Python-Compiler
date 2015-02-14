@@ -1,6 +1,7 @@
 import compiler, sys, re, astpp, os
 from compiler.ast import *
 import flattener
+import colorGraph_AlexRose as colorGraph
 from x86AST import *
 
 
@@ -40,6 +41,7 @@ def liveness(asm):
 	live_after = [set([])]*len(asm)
 	l = len(live_after) - 1
 	for index, instr in enumerate(reversed(asm)):
+		print "looking at instr:",instr
 		bases = instr.__class__.__bases__
 		if index != l:
 			#compute the liveness of the instruction if it actually does anything to variables
@@ -49,15 +51,16 @@ def liveness(asm):
 				OneArg:  liveOneArg,
 				TwoArgs: liveTwoArgs,
 				}[bases[0]](instr, live_after[l-index]) if len(bases) else live_after[l-index]
-			#print l-index, instr, live_after[l - index]
+	return live_after
 
 def addEdge(u, v, graph):
 	if u in graph:
-		graph[u].add(v)
+		graph[u][0].add(v)
 	else:
-		graph[u] = set([v])
+		graph[u] = (set(v), False)
 
 def interfereNegPop(instr, index, liveness, graph):
+	print "interfereNegPop"
 	t = instr.reg
 	for v in liveness[index]:
 		if v != t:
@@ -66,39 +69,49 @@ def interfereNegPop(instr, index, liveness, graph):
 def interfereMov(instr, index, liveness, graph):
 	s = instr.reg1
 	t = instr.reg2
+	print "interfereMov"
+	print liveness[index]
 	for v in liveness[index]:
 		if v != t and v != s:
 			addEdge(t, v, graph)
+			addEdge(v, t, graph)
 
 def interfereAddSub(instr, index, liveness, graph):
+	print "interfereAddSub"
 	s = instr.reg1
 	t = instr.reg2
 	for v in liveness[index]:
 		if v != t and v != s:
 			addEdge(t, v, graph)
+			addEdge(v, t, graph)
 
 def interfereCall(instr, index, liveness, graph):
+	print "interfereCall"
 	for v in liveness[index]:
 		addEdge("%eax", v, graph)
 		addEdge("%ecx", v, graph)
 		addEdge("%edx", v, graph)
+		addEdge(v, "%eax", graph)
+		addEdge(v, "%ecx", graph)
+		addEdge(v, "%edx", graph)
 
 def interfere(asm, liveness):
-	interferePass = lambda(i,n,l,g): pass
+	interferePass = lambda i,n,l,g: None
 	graph = {}
 	for index, instr in enumerate(asm):
 		{
-			Pushl:   interferePass
-			Popl:    interfereNegPop
-			Negl:    interfereNegPop
-			Movl:    interfereMov
-			Addl:    interfereAddSub
-			Subl:    interfereAddSub
-			Call:    interfereCall
-			Leave:   interferePass
-			Ret:     interferePass
+			Pushl:   interferePass,
+			Popl:    interfereNegPop,
+			Negl:    interfereNegPop,
+			Movl:    interfereMov,
+			Addl:    interfereAddSub,
+			Subl:    interfereAddSub,
+			Call:    interfereCall,
+			Leave:   interferePass,
+			Ret:     interferePass,
 			Newline: interferePass
-		}[bases[0]](instr, index, liveness, graph)
+		}[instr.__class__](instr, index, liveness, graph)
+	return graph
 
 
 def compile(ast):
@@ -117,18 +130,25 @@ def compile(ast):
 		Addl(reg1="x",reg2="y"),
 		Movl(reg1="y",reg2="w"),
 		Addl(reg1="x",reg2="w"),
+		Pushl(const=4),
+		
+		Call("print"),
+		Addl(reg1="x",reg2="w"),
+		Leave(),
+		Ret(),
 		]
-	'''asm.append(Pushl(reg="%ebp"))
+	'''asm = []
+	asm.append(Pushl(reg="%ebp"))
 	asm.append(Movl(reg1="%esp", reg2="%ebp"))
-	asm.append(Subl(const1=len(map)*4, reg2="%esp"))
+	asm.append(Subl(const1=len(map)*4, reg2="%esp"))#todo change this instruction
 	#asm.append(Newline())
 	pyToAsm(newast, None, asm, map)
 	asm.append(Movl(const1=0, reg2="%eax"))
 	asm.append(Leave())
 	asm.append(Ret())'''
-	#for instr in asm:
-	#	print instr
-	liveness(asm)
+	l = liveness(asm)
+	print "liveness:",l
+	print interfere(asm, l)
 	return
 	f = open(re.split("\.[^\.]*$", sys.argv[1])[0]+".s", "w")
 	f.write(".globl main\nmain:\n")

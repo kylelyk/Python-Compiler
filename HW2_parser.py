@@ -60,6 +60,7 @@ def p_program(t):
 	t[0] = Module(None, t[1])
 def p_module(t):
 	'module : statement'
+	#print t[0], t[1]
 	t[0] = Stmt(t[1])
 def p_empty(t):
 	'module :'
