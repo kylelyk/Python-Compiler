@@ -4,3 +4,8 @@ do
 	rm $name
 done
 
+for name in $(find  \( ! -name . -prune \) -type f \( -name "*.pyc" -or -name "*.out" \));
+do
+	echo rm $name
+	rm $name
+done

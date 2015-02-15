@@ -5,16 +5,8 @@
 #4. Its saturation (the number of trues in #1 array)
 #5. Whether it's "unspillable", apparently relevant in the third part.
 # Unassigned color is -1, registers are 0-5, memory is 10.
-
-
-'''class color_node:
-
-    adj_list = {}
-    adj_colors = [False, False, False, False, False, False]
-    color = -1
-    saturation = 0
-    is_unspill = False
-'''        
+       
+reg_color = {"%eax":0, "%ecx": 1, "%edx": 2, "%ebx":3, "%esi":4, "%edi":5}
 
 #Returns the key of the next node to be colored
 def choose_next_node(graph, saturation, color):
@@ -29,10 +21,8 @@ def choose_next_node(graph, saturation, color):
             (next_node, max_sat) = (c_node, sat)
 
     return next_node
-        
 #Returns a map, w/ node names as key and color as info.
 def color_graph(graph):
-    
     #Starting location of "memory"
     to_mem = 10
 
@@ -56,23 +46,25 @@ def color_graph(graph):
         saturation[graph.keys()[i]] = 0
         
     
-    reg_color = {"%eax":0 "%ecx": 1 "%edx": 2 "ebx":3 "esi":4 "edi":5}
+    reg_color = {"%eax":0, "%ecx": 1, "%edx": 2, "ebx":3, "esi":4, "edi":5}
+
+    node_count = len(graph)
     
     #We color special nodes first, if they exist.
     #Only first three should be spotted atm, but that can change.
     for i in range (len(reg_color.keys())):
-        if reg_color.keys[i] in graph:
-            curr_node = graph[reg_color.keys[i]]
-            col = reg_color[reg_color.keys[i]]
+        if reg_color.keys()[i] in graph:
+            curr_node = reg_color.keys()[i]
+            col = reg_color[reg_color.keys()[i]]
             color[curr_node] = col
             #Once colored, update the info of its neighbors.
             adj_list = graph[curr_node][0]
-            for k in range(len(adj_list)):
-                adj_colors[adj_list[k]][col] = True
-                saturation[adj_list[k]] += 1
+            for name in adj_list:
+                adj_colors[name][col] = True
+                saturation[name] += 1
+            node_count -= 1
         
 
-    node_count = len(graph)
 
     #While a node isn't colored
     while(node_count > 0):
@@ -81,19 +73,19 @@ def color_graph(graph):
     
         for col in range(0,6):
             #Picks the first available color
-            if adj_colors[curr_node] == False:
+            if adj_colors[curr_node][col] == False:
                 color[curr_node] = col
                 #Once colored, update the info of its neighbors.
                 adj_list = graph[curr_node][0]
-                for k in range(len(adj_list)):
-                    adj_colors[adj_list[k]][col] = True
-                    saturation[adj_list[k]] += 1
+                for adj_node in adj_list:
+                    adj_colors[adj_node][col] = True
+                    saturation[adj_node] += 1
                 break
         
             #If no colors are available, assign to a memory location
             elif col == 5:
                 color[curr_node] = to_mem
-                to_mem++
+                to_mem += 1
                 #Assign to the free memory slot, then increment
 
         node_count -= 1
