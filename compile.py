@@ -76,6 +76,7 @@ def interfereNegPop(instr, index, liveness, graph):
 	for v in liveness[index]:
 		if v != t:
 			addEdge(t, v, graph)
+			addEdge(v, t, graph)
 
 def interfereMov(instr, index, liveness, graph):
 	s = instr.reg1
@@ -223,13 +224,14 @@ def compile(ast):
 		iter += 1
 		l = liveness(asm)
 		g = interfere(asm, l)
+		printd("interfernce:\n"+str(g))
 		colors = colorGraph.color_graph(g)
+		printd("colors:\n"+str(colors))
 		asm, cont = spillCode(asm, g, colors, gen)
 	
 	assignLocations(asm, colors)
 	space = max(0, max(colors.values())-9)*4
 	allocStmt.const1 = space
-	
 	asm = optimizePass1(asm)
 	
 	printd("final asm")
