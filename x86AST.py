@@ -151,9 +151,9 @@ def getStackLoc(key, map):
 	
 def moveInto(node, reg, asm, map):
 	if isinstance(node, Const):
-		asm.append(Movl(const1=node.value, reg2=reg))
+		asm.append(Movl(const1=node.value, reg2=reg, comment=str(node.value)+" -> "+reg))
 	else:
-		asm.append(Movl(reg1=node.name, reg2=reg))
+		asm.append(Movl(reg1=node.name, reg2=reg, comment=node.name+" -> "+reg))
 
 def toAsmStmt(ast, assign, asm, map):
 	#print "\nassign:",assign
@@ -167,9 +167,9 @@ def toAsmPrintnl(ast, assign, asm, map):
 	#print ast
 	n = ast.nodes[0]
 	if isinstance(n, Const):
-		asm.append(Pushl(const=n.value))
+		asm.append(Pushl(const=n.value, comment=str(n.value)))
 	else:
-		asm.append(Pushl(reg=n.name))
+		asm.append(Pushl(reg=n.name, comment=n.name))
 	asm.append(Call("print_any"))
 	asm.append(Addl(const1=4, reg2="%esp"))
 
@@ -182,18 +182,18 @@ def toAsmConst(ast, assign, asm, map):
 def toAsmUnarySub(ast, assign, asm, map):
 	#print "UnarySub"
 	if isinstance(ast.expr, Const):
-		asm.append(Movl(const1=ast.expr.value, reg2=assign))
+		asm.append(Movl(const1=ast.expr.value, reg2=assign, comment="- "+str(ast.expr.value)))
 	else:
-		asm.append(Movl(reg1=ast.expr.name, reg2=assign))
+		asm.append(Movl(reg1=ast.expr.name, reg2=assign, comment="- "+str(ast.expr.name)))
 	asm.append(Negl(reg=assign))
 
 def toAsmAdd(ast, assign, asm, map):
 	#print "Add"
 	moveInto(ast.right, assign, asm, map)
 	if isinstance(ast.left, Const):
-		asm.append(Addl(const1=ast.left.value, reg2=assign))
+		asm.append(Addl(const1=ast.left.value, reg2=assign, comment=str(ast.left.value)+" + "+assign))
 	else:
-		asm.append(Addl(reg1=ast.left.name, reg2=assign))
+		asm.append(Addl(reg1=ast.left.name, reg2=assign, comment=ast.left.name+" + "+assign))
 
 def toAsmAssign(ast, assign, asm, map):
 	#print "Assign"
@@ -203,14 +203,20 @@ def toAsmName(ast, assign, asm, map):
 	moveInto(ast, assign, asm, map)
 
 def toAsmCallFunc(ast, assign, asm, map):
+	comment = ast.node+"("
+	for arg in ast.args:
+		comment += str(arg.value)+", " if isinstance(arg, Const) else arg.name+", "
+	if len(ast.args) > 0:
+		comment = comment[:-2]
+	comment += ")"
 	for arg in reversed(ast.args):
 		if isinstance(arg, Const):
 			asm.append(Pushl(const=arg.value))
 		else:
 			asm.append(Pushl(reg=arg.name))
 	#print "call is given:",ast
-	asm.append(Call(ast.node))
-	asm.append(Movl(reg1="%eax",reg2=assign))
+	asm.append(Call(ast.node,comment=comment))
+	asm.append(Movl(reg1="%eax",reg2=assign, comment="%eax -> "+assign))
 	asm.append(Addl(const1=len(ast.args)*4,reg2="%esp"))
 
 def toAsmCompare(ast, assign, asm, map):
@@ -219,20 +225,20 @@ def toAsmCompare(ast, assign, asm, map):
 	op, rhs = ast.ops[0]
 	
 	if isinstance(lhs, Const):
-		asm.append(Pushl(const=lhs.value))
+		asm.append(Pushl(const=lhs.value, comment=str(lhs.value)))
 	else:
-		asm.append(Pushl(reg=lhs.name))
+		asm.append(Pushl(reg=lhs.name, comment=lhs.name))
 	if isinstance(rhs, Const):
-		asm.append(Pushl(const=rhs.value))
+		asm.append(Pushl(const=rhs.value, comment=str(rhs.value)))
 	else:
-		asm.append(Pushl(reg=rhs.name))
+		asm.append(Pushl(reg=rhs.name, comment=rhs.name))
 	if op == "==":
 		asm.append(Call("equal"))
 	elif op == "!=":
 		asm.append(Call("not_equal"))
 	asm.append(Pushl(reg1="%eax"))
 	asm.append(Call("inject_bool"))
-	asm.append(Movl(reg1="%eax", reg2=assign))
+	asm.append(Movl(reg1="%eax", reg2=assign, comment="%eax -> "+assign))
 	asm.append(Subl(const1=12,reg2="%esp"))
 
 #Assumes both arguments are metalanguage int types (no tag) 
@@ -240,16 +246,16 @@ def toAsmCompare(ast, assign, asm, map):
 def toAsmOr(ast, assign, asm, map):
 	moveInto(ast.nodes[0], assign, asm, map)
 	if isinstance(ast.nodes[1], Const):
-		asm.append(Orl(const1=ast.nodes[1].value, reg2=assign))
+		asm.append(Orl(const1=ast.nodes[1].value, reg2=assign, comment=str(ast.nodes[1].value)+" bitor "+assign))
 	else:
-		asm.append(Orl(reg1=ast.nodes[1].name, reg2=assign))
+		asm.append(Orl(reg1=ast.nodes[1].name, reg2=assign, comment=ast.nodes[1].name+" bitor "+assign))
 
 def toAsmAnd(ast, assign, asm, map):
 	moveInto(ast.nodes[0], assign, asm, map)
 	if isinstance(ast.nodes[1], Const):
-		asm.append(Andl(const1=ast.nodes[1].value, reg2=assign))
+		asm.append(Andl(const1=ast.nodes[1].value, reg2=assign, comment=str(ast.nodes[1].value)+" bitand "+assign))
 	else:
-		asm.append(Andl(reg1=ast.nodes[1].name, reg2=assign))
+		asm.append(Andl(reg1=ast.nodes[1].name, reg2=assign, comment=ast.nodes[1].name+" bitand "+assign))
 
 def toAsmNot(ast, assign, asm, map):
 	#Code should never reach here
@@ -258,15 +264,16 @@ def toAsmNot(ast, assign, asm, map):
 def toAsmBitxor(ast, assign, asm, map):
 	moveInto(ast[0], assign, asm, map)
 	if isinstance(ast.nodes[1], Const):
-		asm.append(Xorl(const1=ast.nodes[1].value, reg2=assign))
+		asm.append(Xorl(const1=ast.nodes[1].value, reg2=assign, comment=str(ast.nodes[1].value)+" bitxor "+assign))
 	else:
-		asm.append(Xorl(reg1=ast.nodes[1].name, reg2=assign))
+		asm.append(Xorl(reg1=ast.nodes[1].name, reg2=assign, comment=ast.nodes[1].name+" bitxor "+assign))
 
 def toAsmList(ast, assign, asm, map):
 	#Code should never reach here
 	raise NotImplementedError
 
 def toAsmDict(ast, assign, asm, map):
+	#Code should never reach here
 	raise NotImplementedError
 
 def toAsmSubscript(ast, assign, asm, map):
@@ -277,7 +284,7 @@ def toAsmIfStmt(ast, assign, asm, map):
 	new1 = []
 	new2 = []
 	asm.append(Newline())
-	asm.append(Cmpl(reg1="True",reg2=ast.test.name,comment="Start of if"))
+	asm.append(Cmpl(reg1="True",reg2=ast.test.name,comment="Start of if("+ast.test.name+" == True)"))
 	for n in ast.thenAssign:
 		pyToAsm(n, assign, new1, map)
 	for n in ast.elseAssign:
