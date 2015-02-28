@@ -67,6 +67,8 @@ def explicateUnarySub(ast, gen):
 def explicateAdd(ast, gen):
 	name1 = Name(gen.inc().name())
 	name2 = Name(gen.inc().name())
+	
+	
 	return Let(name1, explicate(ast.left, gen),
 		Let(name2, explicate(ast.right, gen),
 			IfExp(InjectFrom("bool",And([Or([IsType("bool",name1), IsType("int",name1)]),Or([IsType("bool",name2), IsType("int",name2)])])),
@@ -78,6 +80,7 @@ def explicateAdd(ast, gen):
 			)
 		)
 	)
+#If(n1 = int || n2 = bool) && (n2 = int || n2 = bool)
 
 def explicateDiscard(ast, gen):
 	return Discard(explicate(ast.expr,gen))

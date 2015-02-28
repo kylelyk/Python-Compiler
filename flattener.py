@@ -2,6 +2,7 @@ import compiler
 from compiler.ast import *
 from explicate import *
 
+debug = False
 #Flattened version of IfExp
 #Is reused for both python ast and asm instructions
 class IfStmt(Node):
@@ -230,13 +231,16 @@ def flatIsType(ast, newast, gen, map):
 	return addAssign(CallFunc("is_"+ast.typ,[simple]), newast, gen, map)
 
 def flatThrowError(ast, newast, gen, map):
-	print "\n\n\n\n\nmessage:",ast.msg,"\n\n\n\n"
+	if(debug):
+		print "\n\n\n\n\nmessage:",ast.msg,"\n\n\n\n"
 	simple = flatten(ast.msg, newast, gen, map)
-	print "simple:",simple
+	if(debug):
+		print "simple:",simple
 	return addAssign(CallFunc("error_pyobj",[simple]), newast, gen, map)
 
 def flatten(ast, newast, gen, map):
-	#print "ast:",ast
+	if (debug):
+		print "ast:",ast
 	return {
 		Module:     flatModule,
 		Stmt:       flatStmt,

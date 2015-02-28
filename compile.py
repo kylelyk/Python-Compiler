@@ -155,7 +155,7 @@ def interfereIfStmt(instr, liveSet, graph):
 	#	if v != t:
 	#		addEdge(t, v, graph)
 	#		addEdge(v, t, graph)
-	#print "instr.liveThen",instr.liveThen
+	#print "instr.liveThen[0]",instr.liveThen
 	#print "instr.liveElse",instr.liveElse
 	interfere(instr.thenAssign, instr.liveThen, graph)
 	interfere(instr.elseAssign, instr.liveElse, graph)
@@ -333,7 +333,7 @@ def compile(ast):
 		g = interfere(asm, l, {})
 		#printd("interfernce:\n"+str(g))
 		colors = colorGraph.color_graph(g)
-		printd("colors:\n"+str(colors))
+		#printd("colors:\n"+str(colors))
 		asm, cont = spillCode(asm, g, colors, gen)
 	
 	asm = removeIf(asm, GenSym())
