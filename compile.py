@@ -5,7 +5,7 @@ import colorGraph
 import explicate
 from x86AST import *
 
-debug = True
+debug = False
 def printd(str):
 	if debug:
 		print str
@@ -149,19 +149,19 @@ def interfereCall(instr, liveSet, graph):
 def interfereIfStmt(instr, liveSet, graph):
 	#print "in interfereIfStmt"
 	#print instr
-	print "liveset in interfereIfStmt:",liveSet
+	#print "liveset in interfereIfStmt:",liveSet
 	t = instr.test.name
 	#for v in liveSet[0]:
 	#	if v != t:
 	#		addEdge(t, v, graph)
 	#		addEdge(v, t, graph)
-	print "instr.liveThen",instr.liveThen
-	print "instr.liveElse",instr.liveElse
+	#print "instr.liveThen",instr.liveThen
+	#print "instr.liveElse",instr.liveElse
 	interfere(instr.thenAssign, instr.liveThen, graph)
 	interfere(instr.elseAssign, instr.liveElse, graph)
 
 def interfere(asm, liveness, graph):
-	print "interference was called with liveness:",liveness
+	#print "interference was called with liveness:",liveness
 	interferePass = lambda i,l,g: None
 	for index, instr in enumerate(asm):
 		#print instr,instr.__class__
@@ -302,10 +302,10 @@ def compile(ast):
 	state = ()
 	explicate.explicate(ast, gen)
 	#print "explicated ast:"
-	astpp.printAst(ast)
+	#astpp.printAst(ast)
 	newast = flattener.flatten(ast, None, gen, map)
-	print "flattened ast:"
-	astpp.printAst(newast)
+	#print "flattened ast:"
+	#astpp.printAst(newast)
 	asm = []
 	asm.append(Pushl(reg="%ebp"))
 	asm.append(Movl(reg1="%esp", reg2="%ebp"))
@@ -329,7 +329,7 @@ def compile(ast):
 	while cont and iter != maxiter:
 		iter += 1
 		l = liveness(asm)
-		print "liveness:",l
+		#print "liveness:",l
 		g = interfere(asm, l, {})
 		#printd("interfernce:\n"+str(g))
 		colors = colorGraph.color_graph(g)

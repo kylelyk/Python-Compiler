@@ -1,1 +1,1 @@
-print 1 if True else 0
+print 1 if (2 != 2) else 0

@@ -123,6 +123,8 @@ class Call():
 		self.name = name
 		self.comment = comment
 	def __str__(self):
+		#print "self.name: "
+		#print self.name
 		return "\tcall " + self.name + addComment(self.comment)
 
 class Leave():

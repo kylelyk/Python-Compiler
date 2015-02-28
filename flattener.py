@@ -98,9 +98,10 @@ def flatAssign(ast, newast, gen, map):
 
 def flatCallFunc(ast, newast, gen, map):
 	#print "flatCallFunc"
-	print "flat CallFunc with param:", ast.node
-	return addAssign(CallFunc("input_int" if ast.node == "input" else ast.node, [flatten(n, newast, gen, map) for n in ast.args]), newast, gen, map)
-
+	#print "flat CallFunc with param:", ast.node
+	return addAssign(CallFunc( ("input_int" if ast.node.name == "input" else "error at line 102") if hasattr(ast.node, 'name') else ast.node, [flatten(n, newast, gen, map) for n in ast.args]), newast, gen, map)
+	#JANK ALERT JANK ALERT JANK ALERT (see email note)
+	
 def flatCompare(ast, newast, gen, map):
 	#print "flatCompare"
 	s1 = flatten(ast.expr, newast, gen, map)
@@ -145,7 +146,7 @@ def flatAnd(ast, newast, gen, map):
 
 def flatNot(ast, newast, gen, map):
 	#print "flatNot"
-	return flatten(InjectFrom(Bitxor([CallFunc("is_true",flatten(ast.expr, newast, gen, map)), Const(1)])), newast, gen, map)
+	return flatten(InjectFrom("bool", Bitxor([CallFunc("is_true",flatten(ast.expr, newast, gen, map)), Const(1)])), newast, gen, map)
 
 def flatList(ast, newast, gen, map):
 	listName = flatten(InjectFrom("big",CallFunc("create_list",[Const(len(ast.nodes))])), newast, gen, map)
@@ -158,7 +159,7 @@ def flatDict(ast, newast, gen, map):
 	for k, v in ast.items:
 		#Ensure value is calculated before key
 		vName = flatten(v, newast, gen, map)
-		flatten(CallFunc("set_subscript",[listName, k, vName]), newast, gen, map)
+		flatten(CallFunc("set_subscript",[dictName, k, vName]), newast, gen, map)
 	return dictName
 
 def flatSubscript(ast, newast, gen, map):
@@ -235,7 +236,7 @@ def flatThrowError(ast, newast, gen, map):
 	return addAssign(CallFunc("error_pyobj",[simple]), newast, gen, map)
 
 def flatten(ast, newast, gen, map):
-	print "ast:",ast
+	#print "ast:",ast
 	return {
 		Module:     flatModule,
 		Stmt:       flatStmt,
