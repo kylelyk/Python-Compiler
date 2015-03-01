@@ -24,7 +24,7 @@ def choose_next_node(graph, saturation, color, path):
 				(next_node, max_sat) = (c_node, sat)
 		return next_node
 		 
-	adj_list = graph[prev_node][0]
+	adj_list = graph[path[0]][0]
 	for adj_node in adj_list:
 		is_colored = (color[adj_node] != -1)
 		if (not is_colored):
