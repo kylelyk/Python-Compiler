@@ -1,4 +1,4 @@
-print [
+list_a = [
    [], 
    {3:True,True:5},
    {
@@ -9,3 +9,7 @@ print [
    },
    [2345,2345,2345,2345]
 ]
+
+print list_a[2][4][4]
+print list_a[2][False][5]
+print list_a[3][3]
