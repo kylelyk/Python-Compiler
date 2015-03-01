@@ -32,7 +32,7 @@ def condAdd(set, elm):
 
 def liveOneArg(instr, prev):
 	s = set(prev)
-	#All instructions read from the var but negl and pushl writes to the var
+	#All instructions read from the var but negl and popl writes to the var
 	if not isinstance(instr, Pushl):
 		s.discard(instr.reg)
 	condAdd(s, instr.reg)
@@ -40,10 +40,7 @@ def liveOneArg(instr, prev):
 
 def liveTwoArgs(instr, prev):
 	#print "prev was:",prev
-	if isinstance(prev, tuple):
-		s = set(prev[0])
-	else:
-		s = set(prev)
+	s = set(prev)
 	s.discard(instr.reg2)
 	condAdd(s, instr.reg1)
 	#movl does not read reg2 but addl/subl do
@@ -60,15 +57,20 @@ def liveIf(instr, prev):
 	instr.liveElse = liveness(instr.elseAssign, prev)
 	#print "assign then:",instr.thenAssign
 	#print "assign else:",instr.elseAssign
-	#print "live then:",instr.liveThen
-	#print "live else:",instr.liveElse
-	return instr.liveThen[0] | instr.liveElse[0]
+	#print "\nlive then:",instr.liveThen
+	#print "\nlive else:",instr.liveElse
+	#TODO remove this hack
+	part1 = liveness([instr.thenAssign[0]], instr.liveThen[0])
+	part2 = liveness([instr.elseAssign[0]], instr.liveElse[0])
+	#print "part1",part1
+	#print "part2",part2
+	ret = part1[0] | part2[0]
+	#print "ret:",ret
+	return ret
 
 #takes in a set of instructions and a set of live variables after the set of instructions
 def liveness(asm, live=set([])):
-	#print "getting liveliness of:"
-	#for instr in asm:
-	#	print instr
+
 	#print ""
 	live_after = [0]*len(asm)
 	l = len(live_after) - 1
@@ -94,6 +96,9 @@ def liveness(asm, live=set([])):
 			#print "ignoring analysis on:",instr
 			#print "prev:",prev
 			live_after[l-index-1] = prev
+	#print "\n\nliveliness of:"
+	#for instr in asm:
+	#	print instr
 	#print "returning:",live_after
 	return live_after
 
@@ -329,11 +334,11 @@ def compile(ast):
 	while cont and iter != maxiter:
 		iter += 1
 		l = liveness(asm)
-		#print "liveness:",l
+		printd("liveness:\n"+str(l))
 		g = interfere(asm, l, {})
 		#printd("interfernce:\n"+str(g))
 		colors = colorGraph.color_graph(g)
-		#printd("colors:\n"+str(colors))
+		printd("colors:\n"+str(colors))
 		asm, cont = spillCode(asm, g, colors, gen)
 	
 	asm = removeIf(asm, GenSym())
@@ -344,7 +349,7 @@ def compile(ast):
 	#return
 	space = max(0, max(colors.values())-9)*4
 	allocStmt.const1 = space
-	asm = optimizePass1(asm)
+	#asm = optimizePass1(asm)
 	
 	printd("\n\nfinal asm")
 	for instr in asm:
