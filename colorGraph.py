@@ -9,18 +9,26 @@
 reg_color = {"%eax":0, "%ecx": 1, "%edx": 2, "%ebx":3, "%esi":4, "%edi":5}
 
 #Returns the key of the next node to be colored
-def choose_next_node(graph, saturation, color):
-    (next_node, max_sat) = ("NO FREE NODE", -10)
+def choose_next_node(graph, saturation, color, prev_node):
+	(next_node, max_sat) = ("NO FREE", -10)
     
-    for k in range(len(graph.keys())):
-        c_node = graph.keys()[k]
+	adj_list = graph[prev_node][0]
+	for adj_node in adj_list:
+		sat = graph[adj_node][1]*10000 + saturation[adj_node]
+		is_colored = (color[adj_node] != -1)
+		if sat > max_sat and not is_colored:
+			(next_node, max_sat) = (adj_node, sat)
+    
+	if (next_node == "NO FREE"):
+		for k in range(len(graph.keys())):
+			c_node = graph.keys()[k]
         #unspillable nodes are given priority, followed by saturation.
-        sat = graph[c_node][1]*10000 + saturation[c_node]
-        is_colored = (color[c_node] != -1)
-        if sat > max_sat and not is_colored:
-            (next_node, max_sat) = (c_node, sat)
+			sat = graph[c_node][1]*10000 + saturation[c_node]
+			is_colored = (color[c_node] != -1)
+			if sat > max_sat and not is_colored:
+				(next_node, max_sat) = (c_node, sat)
 
-    return next_node
+	return next_node
 #Returns a map, w/ node names as key and color as info.
 def color_graph(graph):
     #Starting location of "memory"
@@ -52,6 +60,8 @@ def color_graph(graph):
     
     #We color special nodes first, if they exist.
     #Only first three should be spotted atm, but that can change.
+    
+    
     for i in range (len(reg_color.keys())):
         if reg_color.keys()[i] in graph:
             curr_node = reg_color.keys()[i]
@@ -64,12 +74,13 @@ def color_graph(graph):
                 saturation[name] += 1
             node_count -= 1
         
+    #curr_node has the last node visited in the above loop
 
 
     #While a node isn't colored
     while(node_count > 0):
         
-        curr_node = choose_next_node(graph, saturation, color)
+        curr_node = choose_next_node(graph, saturation, color, curr_node)
     
         for col in range(0,6):
             #Picks the first available color
@@ -91,4 +102,5 @@ def color_graph(graph):
         node_count -= 1
 
     return color
+
 
