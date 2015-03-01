@@ -38,7 +38,6 @@ def addAssign(node, newast, gen, map, name = None):
 		map[name] = len(map)
 	elif name not in map:
 		map[name] = len(map)
-	#print "node:",node
 	if isinstance(node, tuple):
 		raise NotImplementedError
 	newnode = Assign([AssName(name, 'OP_ASSIGN')], node)
@@ -49,7 +48,6 @@ def flatModule(ast, newast, gen, map):
 	return flatten(ast.node, newast, gen, map)
 
 def flatStmt(ast, newast, gen, map):
-	#print "flatStmt"
 	newast = Stmt([])
 	for node in ast.nodes:
 		flatten(node, newast, gen, map)
@@ -57,14 +55,14 @@ def flatStmt(ast, newast, gen, map):
 
 def flatPrintnl(ast, newast, gen, map):
 	simple = flatten(ast.nodes[0], newast, gen, map)
-	return newast.nodes.append(Printnl([simple], None))
+	return newast.nodes.append(CallFunc(Name("print_any"),[simple]))
 
 def flatConst(ast, newast, gen, map):
 	#Do not inject if its a str reference (for throwing errors)
 	if isinstance(ast.value, str):
 		return ast
 	else:
-		return addAssign(CallFunc("inject_int",[ast]), newast, gen, map)
+		return addAssign(CallFunc(Name("inject_int"),[ast]), newast, gen, map)
 
 def flatName(ast, newast, gen, map):
 	return ast
@@ -76,7 +74,6 @@ def flatUnarySub(ast, newast, gen, map):
 	return addAssign(UnarySub(simple), newast, gen, map)
 
 def flatAdd(ast, newast, gen, map):
-	#print "flatAdd"
 	s1 = flatten(ast.left, newast, gen, map)
 	s2 = flatten(ast.right, newast, gen, map)
 	return addAssign(Add((s1, s2)), newast, gen, map)
@@ -88,31 +85,26 @@ def flatAssName(ast, newast, gen, map):
 	return ast.name
 
 def flatAssign(ast, newast, gen, map):
-	#print "flatAssign"
 	#TODO remove this hack
 	lhs = flatten(ast.nodes[0], newast, gen, map)
 	rhs = flatten(ast.expr, newast, gen, map)
 	if isinstance(lhs, Subscript):
-		return flatten(CallFunc("set_subscript",[lhs.expr, lhs.subs[0], rhs]), newast, gen, map)
+		return flatten(CallFunc(Name("set_subscript"),[lhs.expr, lhs.subs[0], rhs]), newast, gen, map)
 	else:
 		return addAssign(rhs, newast, gen, map, lhs)
 
 def flatCallFunc(ast, newast, gen, map):
-	#print "flatCallFunc"
-	#print "flat CallFunc with param:", ast.node
-	return addAssign(CallFunc( ("input_int" if ast.node.name == "input" else "error at line 102") if hasattr(ast.node, 'name') else ast.node, [flatten(n, newast, gen, map) for n in ast.args]), newast, gen, map)
-	#JANK ALERT JANK ALERT JANK ALERT (see email note)
-	
+	return addAssign(CallFunc(
+		Name("input_int") if ast.node.name == "input" else ast.node,
+		[flatten(n, newast, gen, map) for n in ast.args]
+	),newast, gen, map)
+
 def flatCompare(ast, newast, gen, map):
-	#print "flatCompare"
 	s1 = flatten(ast.expr, newast, gen, map)
 	s2 = flatten(ast.ops[0][1], newast, gen, map)
-	#op = ast.ops[0][0]
-	#InjectFrom("bool", CallFunc("equal"+,[ProjectTo("big",s1),ProjectTo("big",s2)]))
 	return addAssign(Compare(s1,[(ast.ops[0][0], s2)]), newast, gen, map)
 
 def flatOr(ast, newast, gen, map):
-	#print "flatOr"
 	'''Warning, does not implement short-circuiting.
 	Only code generated in the explicate pass should reach here which 
 	does not rely on short-circuiting.
@@ -129,7 +121,6 @@ def flatOr(ast, newast, gen, map):
 		return addAssign(Or([s1, s2]), newast, gen, map)
 
 def flatAnd(ast, newast, gen, map):
-	#print "flatAnd"
 	'''Warning, does not implement short-circuiting.
 	Only code generated in the explicate pass should reach here which 
 	does not rely on short-circuiting.
@@ -145,46 +136,51 @@ def flatAnd(ast, newast, gen, map):
 		s2 = flatten(ast.nodes[1], newast, gen, map)
 		return addAssign(And([s1, s2]), newast, gen, map)
 
+def flatBitxor(ast, newast, gen, map):
+	if len(ast.nodes) > 2:
+		prev = flatten(ast.nodes[0])
+		for i in range(1,len(ast.nodes)):
+			new = flatten(ast.nodes[i])
+			prev = addAssign(Bitxor([prev, new]), newast, gen, map)
+		return prev
+	else:
+		s1 = flatten(ast.nodes[0], newast, gen, map)
+		s2 = flatten(ast.nodes[1], newast, gen, map)
+		return addAssign(Bitxor([s1, s2]), newast, gen, map)
+
 def flatNot(ast, newast, gen, map):
-	#print "flatNot"
-	return flatten(InjectFrom("bool", Bitxor([CallFunc("is_true",flatten(ast.expr, newast, gen, map)), Const(1)])), newast, gen, map)
+	#TODO fix this hack
+	return flatten(InjectFrom("bool", Bitxor([CallFunc(Name("is_true"),[flatten(ast.expr, newast, gen, map)]), ProjectTo("int",Const(1))])), newast, gen, map)
 
 def flatList(ast, newast, gen, map):
-	listName = flatten(InjectFrom("big",CallFunc("create_list",[Const(len(ast.nodes))])), newast, gen, map)
+	listName = flatten(InjectFrom("big",CallFunc(Name("create_list"),[Const(len(ast.nodes))])), newast, gen, map)
 	for i,n in enumerate(ast.nodes):
-		flatten(CallFunc("set_subscript",[listName, Const(i), n]), newast, gen, map)
+		flatten(CallFunc(Name("set_subscript"),[listName, Const(i), n]), newast, gen, map)
 	return listName
 
 def flatDict(ast, newast, gen, map):
-	dictName = flatten(InjectFrom("big",CallFunc("create_dict",[Const(len(ast.items))])), newast, gen, map)
+	dictName = flatten(InjectFrom("big",CallFunc(Name("create_dict"),[Const(len(ast.items))])), newast, gen, map)
 	for k, v in ast.items:
 		#Ensure value is calculated before key
 		vName = flatten(v, newast, gen, map)
-		flatten(CallFunc("set_subscript",[dictName, k, vName]), newast, gen, map)
+		flatten(CallFunc(Name("set_subscript"),[dictName, k, vName]), newast, gen, map)
 	return dictName
 
 def flatSubscript(ast, newast, gen, map):
-	#double check right order of flattens
 	if ast.flags == "OP_ASSIGN":
 		#TODO take out this hack and refactor flatten
 		return Subscript(flatten(ast.expr, newast, gen, map), ast.flags, flatten(ast.subs[0], newast, gen, map))
 	else:
-		return flatten(CallFunc("get_subscript",[ast.expr, ast.subs[0]]), newast, gen, map)
+		return flatten(CallFunc(Name("get_subscript"),[ast.expr, ast.subs[0]]), newast, gen, map)
 
 def flatIfExp(ast, newast, gen, map):
-
-	#print "flatIfExp"
 	#Will not be fully flattened in order to preserve correctness
 	#Unifies returns to a single variable
 	thenNewast = Stmt([])
 	elseNewast = Stmt([])
-	#print "thenast:",
-	#astpp.printAst(ast.then)
 	thenRet = flatten(ast.then, thenNewast, gen, map)
-	#print "thenRet:",thenRet
 	elseRet = flatten(ast.else_, elseNewast, gen, map)
 	retVar = Name(gen.inc().name())
-	#print "if statement will be assigned to",retVar
 	addAssign(thenRet, thenNewast, gen, map, retVar.name)
 	addAssign(elseRet, elseNewast, gen, map, retVar.name)
 	cond = flatten(ast.test, newast, gen, map)
@@ -202,25 +198,19 @@ def flatIfExp(ast, newast, gen, map):
 	return retVar
 
 def flatGetTag(ast, newast, gen, map):
-	#print "flatGetTag"
 	simple = flatten(ast.arg, newast, gen, map)
-	return addAssign(CallFunc("tag",[simple]), newast, gen, map)
+	return addAssign(CallFunc(Name("tag"),[simple]), newast, gen, map)
 
 def flatInjectFrom(ast, newast, gen, map):
-	#print "flatInjectFrom"
 	simple = flatten(ast.arg, newast, gen, map)
-	#print newast
-	temp = addAssign(CallFunc("inject_"+ast.typ,[simple]), newast, gen, map)
-	#print "inject returning:", temp
+	temp = addAssign(CallFunc(Name("inject_"+ast.typ),[simple]), newast, gen, map)
 	return temp
 
 def flatProjectTo(ast, newast, gen, map):
-	#print "flatProjectTo"
 	simple = flatten(ast.arg, newast, gen, map)
-	return addAssign(CallFunc("project_"+ast.typ,[simple]), newast, gen, map)
+	return addAssign(CallFunc(Name("project_"+ast.typ),[simple]), newast, gen, map)
 
 def flatLet(ast, newast, gen, map):
-	#print "flatLet"
 	rhs = flatten(ast.rhs, newast, gen, map)
 	var = flatten(ast.var, newast, gen, map)
 	addAssign(rhs, newast, gen, map, var.name)
@@ -228,19 +218,13 @@ def flatLet(ast, newast, gen, map):
 
 def flatIsType(ast, newast, gen, map):
 	simple = flatten(ast.arg, newast, gen, map)
-	return addAssign(CallFunc("is_"+ast.typ,[simple]), newast, gen, map)
+	return addAssign(CallFunc(Name("is_"+ast.typ),[simple]), newast, gen, map)
 
 def flatThrowError(ast, newast, gen, map):
-	if(debug):
-		print "\n\n\n\n\nmessage:",ast.msg,"\n\n\n\n"
 	simple = flatten(ast.msg, newast, gen, map)
-	if(debug):
-		print "simple:",simple
-	return addAssign(CallFunc("error_pyobj",[simple]), newast, gen, map)
+	return addAssign(CallFunc(Name("error_pyobj"),[simple]), newast, gen, map)
 
 def flatten(ast, newast, gen, map):
-	if (debug):
-		print "ast:",ast
 	return {
 		Module:     flatModule,
 		Stmt:       flatStmt,
@@ -256,6 +240,7 @@ def flatten(ast, newast, gen, map):
 		Compare:    flatCompare,
 		Or:         flatOr,
 		And:        flatAnd,
+		Bitxor:     flatBitxor,
 		Not:        flatNot,
 		List:       flatList,
 		Dict:       flatDict,

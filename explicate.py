@@ -38,15 +38,12 @@ class ThrowError(Node):
 		return (self.msg,)
 
 def explicateModule(ast, gen):
-	#print "explicateModule called"
 	ast.node = explicate(ast.node, gen)
 
 def explicateStmt(ast, gen):
-	#print "explicateStmt called"
 	return Stmt([explicate(n, gen) for n in ast.nodes])
 
 def explicatePrintnl(ast, gen):
-	#print "explicatePrintnl called"
 	return Printnl([explicate(ast.nodes[0], gen)], None)
 
 def explicateConst(ast, gen):
@@ -67,20 +64,32 @@ def explicateUnarySub(ast, gen):
 def explicateAdd(ast, gen):
 	name1 = Name(gen.inc().name())
 	name2 = Name(gen.inc().name())
-	
-	
+	res1 = Name(gen.inc().name())
+	res2 = Name(gen.inc().name())
 	return Let(name1, explicate(ast.left, gen),
 		Let(name2, explicate(ast.right, gen),
+			#If(n1 = int || n2 = bool) && (n2 = int || n2 = bool)
 			IfExp(InjectFrom("bool",And([Or([IsType("bool",name1), IsType("int",name1)]),Or([IsType("bool",name2), IsType("int",name2)])])),
-				InjectFrom("int",Add((ProjectTo("int", name1),ProjectTo("int", name2)))),
+				Let(res1, 
+					IfExp(InjectFrom("bool",IsType("bool",name1)),
+						ProjectTo("bool",name1),
+						ProjectTo("int",name1)
+					),
+					Let(res2,
+						IfExp(InjectFrom("bool",IsType("bool",name2)),
+							ProjectTo("bool",name2),
+							ProjectTo("int",name2)
+						),
+						InjectFrom("int",Add((res1,res2)))
+					)
+				),
 				IfExp(InjectFrom("bool",And([IsType("big",name1), IsType("big",name2)])),
-					InjectFrom("big",CallFunc("add",[ProjectTo("big", name1),ProjectTo("big", name2)])),
+					InjectFrom("big",CallFunc(Name("add"),[ProjectTo("big", name1),ProjectTo("big", name2)])),
 					ThrowError(Const("addError"))
 				)
 			)
 		)
 	)
-#If(n1 = int || n2 = bool) && (n2 = int || n2 = bool)
 
 def explicateDiscard(ast, gen):
 	return Discard(explicate(ast.expr,gen))
@@ -103,41 +112,41 @@ def explicateCompare(ast, gen):
 		rhs = explicate(expr, gen)
 		name1 = Name(gen.inc().name())
 		name2 = Name(gen.inc().name())
-		funcname = "not_equal" if op == "!=" else "equal"
+		funcname = Name("not_equal" if op == "!=" else "equal")
 		return Let(name1, lhs, Let(name2, rhs, IfExp(
-			And([Not(IsType("big", name1)), Not(IsType("big", name2))]),
-			Compare(name1,[(op,name2)]),
+			InjectFrom("bool",Or([IsType("big", name1), IsType("big", name2)])),
 			IfExp(
 				InjectFrom("bool", And([IsType("big", name1), IsType("big", name2)])),
 				InjectFrom("bool", CallFunc(funcname, [ProjectTo("big",name1), ProjectTo("big",name2)])),
 				Name("False")
-			)
+			),
+			Compare(name1,[(op,name2)])
 		)))
 
 def explicateOr(ast, gen):
 	#Implements Short-circuiting using nested IfStmt's
-	def rec(nodes, index):
-		if index < len(nodes) - 1:
-			name = Name(gen.inc().name())
-			return Let(name, explicate(nodes[index], gen),
-				IfExp(name, name, rec(nodes, index+1))
-			)
-		return explicate(nodes[index], gen)
-	return rec(ast.nodes, 0)
+	name = Name(gen.inc().name())
+	return Let(name,
+		ast.nodes[0],
+		IfExp(InjectFrom("bool",CallFunc(Name("is_true"), [name])),
+			name,
+			ast.nodes[1]
+		)
+	)
 
 def explicateAnd(ast, gen):
 	#Implements Short-circuiting using nested IfStmt's
-	def rec(nodes, index):
-		if index < len(nodes) - 1:
-			name = Name(gen.inc().name())
-			return Let(name, explicate(nodes[index], gen),
-				IfExp(name, rec(nodes, index+1), name)
-			)
-		return explicate(nodes[index], gen)
-	return rec(ast.nodes, 0)
+	name = Name(gen.inc().name())
+	return Let(name,
+		ast.nodes[0],
+		IfExp(InjectFrom("bool",CallFunc(Name("is_true"), [name])),
+			ast.nodes[1],
+			name
+		)
+	)
 
 def explicateNot(ast, gen):
-	return Not(InjectFrom("bool",CallFunc("is_true", [explicate(ast.expr, gen)])))
+	return Not(explicate(ast.expr, gen))
 
 def explicateList(ast, gen):
 	return List([explicate(n, gen) for n in ast.nodes])

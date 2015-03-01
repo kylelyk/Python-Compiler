@@ -39,7 +39,6 @@ def liveOneArg(instr, prev):
 	return s
 
 def liveTwoArgs(instr, prev):
-	#print "prev was:",prev
 	s = set(prev)
 	s.discard(instr.reg2)
 	condAdd(s, instr.reg1)
@@ -51,39 +50,21 @@ def liveTwoArgs(instr, prev):
 def liveIf(instr, prev):
 	liveThen = set(prev if prev else [])
 	liveElse = set(prev if prev else [])
-	#print "live set before then",liveThen
-	#print "live set before else",liveElse
 	instr.liveThen = liveness(instr.thenAssign, prev)
 	instr.liveElse = liveness(instr.elseAssign, prev)
-	#print "assign then:",instr.thenAssign
-	#print "assign else:",instr.elseAssign
-	#print "\nlive then:",instr.liveThen
-	#print "\nlive else:",instr.liveElse
 	#TODO remove this hack
 	part1 = liveness([instr.thenAssign[0]], instr.liveThen[0])
 	part2 = liveness([instr.elseAssign[0]], instr.liveElse[0])
-	#print "part1",part1
-	#print "part2",part2
-	ret = part1[0] | part2[0]
-	#print "ret:",ret
-	return ret
+	return part1[0] | part2[0]
 
 #takes in a set of instructions and a set of live variables after the set of instructions
 def liveness(asm, live=set([])):
-
-	#print ""
 	live_after = [0]*len(asm)
 	l = len(live_after) - 1
-	#live_after[l] = live
-	#print "live passed in:",live
-	#print "initialization:",live_after
 	for index, instr in enumerate(reversed(asm)):
-		#print "live_after:",live_after
 		bases = instr.__class__.__bases__
 		prev = live_after[l-index] if index != 0 else live
 		if len(bases):
-			#print "passing set:",prev
-			#print "analysis on:",instr
 			#compute the liveness of the instruction if it actually does anything to variables
 			#instructions that do not inherit from OneArg, TwoArgs, or Node (If) are not considered
 			#and the result is copied from the previous iteration
@@ -93,13 +74,7 @@ def liveness(asm, live=set([])):
 				Node:    liveIf
 				}[bases[0]](instr, prev)
 		else:
-			#print "ignoring analysis on:",instr
-			#print "prev:",prev
 			live_after[l-index-1] = prev
-	#print "\n\nliveliness of:"
-	#for instr in asm:
-	#	print instr
-	#print "returning:",live_after
 	return live_after
 
 def addEdge(u, v, graph):
@@ -138,7 +113,6 @@ def interfereTwoArg(instr, liveSet, graph):
 	addNode(t, graph)
 	for v in liveSet:
 		if v != t:
-			#print "adding edge",v,"to",t
 			addEdge(t, v, graph)
 			addEdge(v, t, graph)
 
@@ -152,26 +126,12 @@ def interfereCall(instr, liveSet, graph):
 		addEdge(v, "%edx", graph)
 
 def interfereIfStmt(instr, liveSet, graph):
-	#print "in interfereIfStmt"
-	#print instr
-	#print "liveset in interfereIfStmt:",liveSet
-	t = instr.test.name
-	#for v in liveSet[0]:
-	#	if v != t:
-	#		addEdge(t, v, graph)
-	#		addEdge(v, t, graph)
-	#print "instr.liveThen[0]",instr.liveThen
-	#print "instr.liveElse",instr.liveElse
 	interfere(instr.thenAssign, instr.liveThen, graph)
 	interfere(instr.elseAssign, instr.liveElse, graph)
 
 def interfere(asm, liveness, graph):
-	#print "interference was called with liveness:",liveness
 	interferePass = lambda i,l,g: None
 	for index, instr in enumerate(asm):
-		#print instr,instr.__class__
-		#liveSet = liveness[index][0] if isinstance(liveness[index], tuple) else liveness[index]
-		#print "
 		{
 			Pushl:   interferePass,
 			Popl:    interfereNegPop,
@@ -181,7 +141,9 @@ def interfere(asm, liveness, graph):
 			Subl:    interfereTwoArg,
 			Orl:     interfereTwoArg,
 			Andl:    interfereTwoArg,
+			Xorl:    interfereTwoArg,
 			Cmpl:    interfereTwoArg,
+			Cmovel:  interfereTwoArg,
 			Call:    interfereCall,
 			Leave:   interferePass,
 			Ret:     interferePass,
@@ -241,7 +203,6 @@ def locOneArg(instr, color):
 		if instr.reg in color:
 			loc = color[instr.reg]
 		else:
-			print instr
 			loc= colorGraph.reg_color[instr.reg]
 		if loc > 5:
 			instr.reg = "%ebp"
@@ -336,20 +297,16 @@ def compile(ast):
 		l = liveness(asm)
 		printd("liveness:\n"+str(l))
 		g = interfere(asm, l, {})
-		#printd("interfernce:\n"+str(g))
+		printd("interfernce:\n"+str(g))
 		colors = colorGraph.color_graph(g)
 		printd("colors:\n"+str(colors))
 		asm, cont = spillCode(asm, g, colors, gen)
 	
 	asm = removeIf(asm, GenSym())
 	assignLocations(asm, colors)
-	#printd("If's removed asm:")
-	#for instr in asm:
-	#	printd(instr)
-	#return
 	space = max(0, max(colors.values())-9)*4
 	allocStmt.const1 = space
-	#asm = optimizePass1(asm)
+	asm = optimizePass1(asm)
 	
 	printd("\n\nfinal asm")
 	for instr in asm:
