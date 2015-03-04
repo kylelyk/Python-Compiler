@@ -110,6 +110,13 @@ class Jne():
 		self.comment = comment
 	def __str__(self):
 		return ("\tjne " + self.label).ljust(15) + addComment(self.comment)
+	
+class Jl():
+	def __init__(self, label, comment = ""):
+		self.label = label
+		self.comment = comment
+	def __str__(self):
+		return ("\tjl " + self.label).ljust(15) + addComment(self.comment)
 
 class Jmp():
 	def __init__(self, label, comment = ""):
@@ -228,10 +235,11 @@ def toAsmCompare(ast, assign, asm, map):
 			asm.append(Call(Name("equal")))
 		elif op == "!=":
 			asm.append(Call(Name("not_equal")))
+		asm.append(Addl(const1=8,reg2="%esp"))
 		asm.append(Pushl(reg="%eax"))
 		asm.append(Call(Name("inject_bool")))
 		asm.append(Movl(reg1="%eax", reg2=assign, comment="%eax -> "+assign))
-		asm.append(Subl(const1=8,reg2="%esp"))
+		asm.append(Addl(const1=4,reg2="%esp"))
 	else:
 		addInstr2(lhs, rhs, Cmpl, asm, lambda a, b : "cmp"+a+" - "+b)
 		asm.append(Movl(reg1="False", reg2=assign))

@@ -122,6 +122,7 @@ def explicateCompare(ast, gen):
 			),
 			Compare(name1,[(op,name2)])
 		)))
+	
 
 def explicateOr(ast, gen):
 	#Implements Short-circuiting using nested IfStmt's
@@ -158,7 +159,41 @@ def explicateSubscript(ast, gen):
 	return Subscript(ast.expr, None, [explicate(sub, gen) for sub in ast.subs])
 
 def explicateIfExp(ast, gen):
-	return IfExp(explicate(ast.test, gen), explicate(ast.then, gen), explicate(ast.else_, gen))
+	name = Name(gen.inc().name())
+	test = explicate(ast.test, gen)
+	then_node = explicate(ast.then, gen)
+	else_node = explicate(ast.else_, gen)
+	
+	#Check if the input is a list or dict, and spit out appropiate node
+	#NOTE: At the moment, this works cause the input is known
+	#to be a list or dict at runtime. If we eventually have an input()
+	#function that takes Lists and Dicts, this'll have to change.
+	if(isinstance(test,List)):
+		list_not_empty = False if (not test.nodes) else True
+		if(list_not_empty):
+			return then_node
+		else:
+			return else_node
+	
+	if(isinstance(test,Dict)):
+		dict_not_empty = False if (not test.items) else True
+		if(dict_not_empty):
+			return then_node
+		else:
+			return else_node
+	
+	#If our test is actually a boolean, return this
+	bool_return = IfExp(test, then_node, else_node)
+	
+	test_is_int = InjectFrom("bool", IsType("int", name))
+	convert_int_to_bool = InjectFrom("bool", ProjectTo("int", name))
+	
+	int_return = IfExp(convert_int_to_bool, then_node, else_node)
+	
+	return Let(name, test, IfExp(test_is_int, int_return, bool_return))
+	
+	 
+	#return IfExp(explicate(ast.test, gen), explicate(ast.then, gen), explicate(ast.else_, gen))
 
 def explicate(ast, gen):
 	return {

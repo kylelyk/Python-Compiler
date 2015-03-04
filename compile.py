@@ -188,7 +188,7 @@ def removeIf(asm, gen):
 		if isinstance(instr, IfStmt):
 			labelName1 = "elselbl_" + gen.inc().get()
 			labelName2 = "endlbl_" + gen.get()
-			newasm.append(Jne(labelName1))
+			newasm.append(Jl(labelName1))
 			newasm.extend(removeIf(instr.thenAssign, gen))
 			newasm.append(Jmp(labelName2))
 			newasm.append(Label(labelName1))
