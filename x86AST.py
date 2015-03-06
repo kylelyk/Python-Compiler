@@ -226,22 +226,17 @@ def toAsmCallFunc(ast, assign, asm, map):
 	asm.append(Addl(const1=len(ast.args)*4,reg2="%esp"))
 
 def toAsmCompare(ast, assign, asm, map):
+	'''
+	Compare two basic values.
+	Should not be called with complex values.
+	'''
 	lhs = ast.expr
 	op, rhs = ast.ops[0]
-	if op == "==" or op == "!=":
-		addInstr1(lhs, Pushl, asm, lambda a: a)
-		addInstr1(rhs, Pushl, asm, lambda a: a)
-		if op == "==":
-			asm.append(Call(Name("equal")))
-		elif op == "!=":
-			asm.append(Call(Name("not_equal")))
-		asm.append(Addl(const1=8,reg2="%esp"))
-		asm.append(Pushl(reg="%eax"))
-		asm.append(Call(Name("inject_bool")))
-		asm.append(Movl(reg1="%eax", reg2=assign, comment="%eax -> "+assign))
-		asm.append(Addl(const1=4,reg2="%esp"))
+	addInstr2(lhs, rhs, Cmpl, asm, lambda a, b : "cmp"+a+" - "+b)
+	if op == "!=":
+		asm.append(Movl(reg1="True", reg2=assign))
+		asm.append(Cmovel(reg1="False",reg2=assign))
 	else:
-		addInstr2(lhs, rhs, Cmpl, asm, lambda a, b : "cmp"+a+" - "+b)
 		asm.append(Movl(reg1="False", reg2=assign))
 		asm.append(Cmovel(reg1="True",reg2=assign))
 
