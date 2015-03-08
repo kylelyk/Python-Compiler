@@ -1,3 +1,5 @@
+trap "exit" INT
+
 if [ "$#" -gt 0 ]
 then
 	name="$1"

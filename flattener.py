@@ -169,7 +169,7 @@ def flatDict(ast, newast, gen, map):
 def flatSubscript(ast, newast, gen, map):
 	if ast.flags == "OP_ASSIGN":
 		#TODO take out this hack and refactor flatten
-		return Subscript(flatten(ast.expr, newast, gen, map), ast.flags, flatten(ast.subs[0], newast, gen, map))
+		return Subscript(flatten(ast.expr, newast, gen, map), ast.flags, [flatten(ast.subs[0], newast, gen, map)])
 	else:
 		return flatten(CallFunc(Name("get_subscript"),[ast.expr, ast.subs[0]]), newast, gen, map)
 
