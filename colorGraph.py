@@ -1,11 +1,9 @@
-
 reg_color = {"%eax":0, "%ecx":1, "%edx":2, "%ebx":3, "%esi":4, "%edi":5, "%esp":6, "%ebp":7}
 reg_map =   {0:"%eax", 1:"%ecx", 2:"%edx", 3:"%ebx", 4:"%esi", 5:"%edi", 6:"%esp", 7:"%ebp"}
+#Starting location of "memory"
 memStart = 10
 
 def color_graph(graph):
-	#Starting location of "memory"
-
 	#Dictionary of sets of ints
 	adj_colors = {}
 	#Dictionary of ints

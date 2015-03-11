@@ -31,7 +31,6 @@ def spillCode(asm, graph, colors, gen):
 	for index, instr in enumerate(asm):
 		bases = instr.__class__.__bases__
 		if isinstance(instr, IfStmt):
-			#print "found if"
 			thenSpilled, spill1 = spillCode(instr.thenAssign, graph, colors, gen)
 			elseSpilled, spill2 = spillCode(instr.elseAssign, graph, colors, gen)
 			spilled = spilled + spill1 + spill2
@@ -46,9 +45,7 @@ def spillCode(asm, graph, colors, gen):
 		elif len(bases) and bases[0] == TwoArgs:
 			if isinstance(instr, Cmovel) and instr.reg2 and colors[instr.reg2] > 7:
 				#Apparently, cmovel does not allow a displacement in the destination location
-				#print instr
 				spilledvar = gen.inc().name()
-				#print "spilledvar:",spilledvar
 				spilled.append(spilledvar)
 				printd( "in spilled cmovel "+spilledvar)
 				if instr.const1:
@@ -57,18 +54,14 @@ def spillCode(asm, graph, colors, gen):
 					newasm.append(Cmovel(reg1=instr.reg1, reg2=spilledvar))
 				newasm.append(Movl(reg1=spilledvar, reg2=instr.reg2,comment="spilled "+instr.reg2+" into "+spilledvar))
 			elif instr.reg1 and instr.reg1 in colors and colors[instr.reg1] > 7 and instr.reg2 and instr.reg2 in colors and colors[instr.reg2] > 7:
-				#print instr
 				spilledvar = gen.inc().name()
-				#print "spilledvar:",spilledvar
 				spilled.append(spilledvar)
 				
 				newasm.append(Movl(reg1=instr.reg1,reg2=spilledvar,comment="spilled "+instr.reg2+" into "+spilledvar))
 				newasm.append(instr.__class__(reg1=spilledvar,reg2=instr.reg2))
 			else:
-				#print "skipping:",instr
 				newasm.append(instr)
 		else:
-			#print "skipping:",instr
 			newasm.append(instr)
 	return newasm, spilled
 
@@ -134,7 +127,6 @@ def assignLocations(asm, color):
 
 #Spilled is an array of spilled variables
 def assignSpilled(g, spilled):
-	#print g
 	for k in spilled:
 		g[k] = (g[k][0] if k in g else set([]), True)
 
@@ -170,7 +162,6 @@ def mainLoop(asm, g, spilled, gen):
 	#printd("colors:\n"+str(colors))
 	asm, s = spillCode(asm, g, colors, gen)
 	spilled = spilled + s
-	#print "spilled:",spilled
 	return asm, g, spilled, colors, bool(s)
 
 def compile(ast):
@@ -200,7 +191,7 @@ def compile(ast):
 	printd("psuedo asm:")
 	for instr in asm:
 		printd(instr)
-	#print(gen.name())
+	print(gen.name())
 
 	maxiter = 10
 	iter = 1
@@ -218,7 +209,7 @@ def compile(ast):
 	assignLocations(asm, colors)
 	space = max(0, max(colors.values())-9)*4
 	allocStmt.const1 = space
-	#asm = optimizePass1(asm)
+	asm = optimizePass1(asm)
 	
 	printd("\n\nfinal asm")
 	for instr in asm:

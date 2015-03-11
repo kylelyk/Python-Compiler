@@ -58,7 +58,7 @@ def flatPrintnl(ast, newast, gen, map):
 	return newast.nodes.append(CallFunc(Name("print_any"),[simple]))
 
 def flatConst(ast, newast, gen, map):
-	#Do not inject if its a str reference (for throwing errors)
+	#Do not inject if its a str constant (for throwing errors)
 	if isinstance(ast.value, str):
 		return ast
 	else:

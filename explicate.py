@@ -52,37 +52,20 @@ def explicateConst(ast, gen):
 def explicateUnarySub(ast, gen):
 	name = Name(gen.inc().name())
 	return Let(name, explicate(ast.expr, gen),
-		IfExp(InjectFrom("bool",IsType("bool",name)),
-			InjectFrom("int",UnarySub(ProjectTo("bool", name))),
-			IfExp(InjectFrom("bool",IsType("int",name)),
-				InjectFrom("int",UnarySub(ProjectTo("int", name))),
-				ThrowError(Const("negError"))
-			)
+		IfExp(InjectFrom("bool", Or([IsType("bool",name), IsType("int",name)])),
+			InjectFrom("int",UnarySub(ProjectTo("boolint", name))),
+			ThrowError(Const("negError"))
 		)
 	)
 
 def explicateAdd(ast, gen):
 	name1 = Name(gen.inc().name())
 	name2 = Name(gen.inc().name())
-	res1 = Name(gen.inc().name())
-	res2 = Name(gen.inc().name())
 	return Let(name1, explicate(ast.left, gen),
 		Let(name2, explicate(ast.right, gen),
 			#If(n1 = int || n2 = bool) && (n2 = int || n2 = bool)
 			IfExp(InjectFrom("bool",And([Or([IsType("bool",name1), IsType("int",name1)]),Or([IsType("bool",name2), IsType("int",name2)])])),
-				Let(res1, 
-					IfExp(InjectFrom("bool",IsType("bool",name1)),
-						ProjectTo("bool",name1),
-						ProjectTo("int",name1)
-					),
-					Let(res2,
-						IfExp(InjectFrom("bool",IsType("bool",name2)),
-							ProjectTo("bool",name2),
-							ProjectTo("int",name2)
-						),
-						InjectFrom("int",Add((res1,res2)))
-					)
-				),
+				InjectFrom("int",Add((ProjectTo("boolint",name1),ProjectTo("boolint",name2)))),
 				IfExp(InjectFrom("bool",And([IsType("big",name1), IsType("big",name2)])),
 					InjectFrom("big",CallFunc(Name("add"),[ProjectTo("big", name1),ProjectTo("big", name2)])),
 					ThrowError(Const("addError"))
@@ -127,7 +110,7 @@ def explicateCompare(ast, gen):
 	
 
 def explicateOr(ast, gen):
-	#Implements Short-circuiting using nested IfStmt's
+	#Implements Short-circuiting using nested IfExp's
 	name = Name(gen.inc().name())
 	return Let(name,
 		explicate(ast.nodes[0], gen),
@@ -138,7 +121,7 @@ def explicateOr(ast, gen):
 	)
 
 def explicateAnd(ast, gen):
-	#Implements Short-circuiting using nested IfStmt's
+	#Implements Short-circuiting using nested IfExp's
 	name = Name(gen.inc().name())
 	return Let(name,
 		explicate(ast.nodes[0], gen),
@@ -161,41 +144,17 @@ def explicateSubscript(ast, gen):
 	return Subscript(ast.expr, None, [explicate(sub, gen) for sub in ast.subs])
 
 def explicateIfExp(ast, gen):
-	name = Name(gen.inc().name())
 	test = explicate(ast.test, gen)
 	then_node = explicate(ast.then, gen)
 	else_node = explicate(ast.else_, gen)
 	
-	#Check if the input is a list or dict, and spit out appropiate node
-	#NOTE: At the moment, this works cause the input is known
-	#to be a list or dict at runtime. If we eventually have an input()
-	#function that takes Lists and Dicts, this'll have to change.
-	if(isinstance(test,List)):
-		list_not_empty = False if (not test.nodes) else True
-		if(list_not_empty):
-			return then_node
-		else:
-			return else_node
+	#Check if the input is a list or dict, and spit out appropriate node
+	if isinstance(test,List):
+		return then_node if test.nodes else else_node
+	elif isinstance(test,Dict):
+		return then_node if test.items else else_node
 	
-	if(isinstance(test,Dict)):
-		dict_not_empty = False if (not test.items) else True
-		if(dict_not_empty):
-			return then_node
-		else:
-			return else_node
-	
-	#If our test is actually a boolean, return this
-	bool_return = IfExp(test, then_node, else_node)
-	
-	test_is_int = InjectFrom("bool", IsType("int", name))
-	convert_int_to_bool = InjectFrom("bool", ProjectTo("int", name))
-	
-	int_return = IfExp(convert_int_to_bool, then_node, else_node)
-	
-	return Let(name, test, IfExp(test_is_int, int_return, bool_return))
-	
-	 
-	#return IfExp(explicate(ast.test, gen), explicate(ast.then, gen), explicate(ast.else_, gen))
+	return IfExp(InjectFrom("bool", CallFunc(Name("is_true"),[test])),then_node, else_node)
 
 def explicate(ast, gen):
 	return {
