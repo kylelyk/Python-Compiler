@@ -113,25 +113,27 @@ def explicateCompare(ast, gen):
 		name1 = Name(gen.inc().name())
 		name2 = Name(gen.inc().name())
 		funcname = Name("not_equal" if op == "!=" else "equal")
-		return Let(name1, lhs, Let(name2, rhs, IfExp(
-			InjectFrom("bool",Or([IsType("big", name1), IsType("big", name2)])),
+		return Let(name1, lhs, Let(name2, rhs, 
 			IfExp(
-				InjectFrom("bool", And([IsType("big", name1), IsType("big", name2)])),
+				InjectFrom("bool",And([IsType("big", name1), IsType("big", name2)])),
 				InjectFrom("bool", CallFunc(funcname, [ProjectTo("big",name1), ProjectTo("big",name2)])),
-				Name("False")
-			),
-			Compare(name1,[(op,name2)])
-		)))
+				IfExp(
+					Or([IsType("big", name1), IsType("big", name2)]),
+					Name("False") if op == "==" else Name("True"),
+					Compare(ProjectTo("boolint", name1), [(op, ProjectTo("boolint", name2))])
+				)
+			)
+		))
 	
 
 def explicateOr(ast, gen):
 	#Implements Short-circuiting using nested IfStmt's
 	name = Name(gen.inc().name())
 	return Let(name,
-		ast.nodes[0],
+		explicate(ast.nodes[0], gen),
 		IfExp(InjectFrom("bool",CallFunc(Name("is_true"), [name])),
 			name,
-			ast.nodes[1]
+			explicate(ast.nodes[1], gen)
 		)
 	)
 
@@ -139,9 +141,9 @@ def explicateAnd(ast, gen):
 	#Implements Short-circuiting using nested IfStmt's
 	name = Name(gen.inc().name())
 	return Let(name,
-		ast.nodes[0],
+		explicate(ast.nodes[0], gen),
 		IfExp(InjectFrom("bool",CallFunc(Name("is_true"), [name])),
-			ast.nodes[1],
+			explicate(ast.nodes[1], gen),
 			name
 		)
 	)

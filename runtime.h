@@ -105,6 +105,7 @@ pyobj inject_big(big_pyobj* p);
 
 int project_int(pyobj val);
 int project_bool(pyobj val);
+int project_boolint(pyobj val);
 big_pyobj* project_big(pyobj val);
 
 /* Operations */

@@ -84,6 +84,10 @@ int project_bool(pyobj val) {
   assert((val & MASK) == BOOL_TAG);
   return val >> SHIFT;
 }
+int project_boolint(pyobj val) {
+  assert((val & MASK) == BOOL_TAG || (val & MASK) == INT_TAG);
+  return val >> SHIFT;
+}
 float project_float(pyobj val) {
   assert((val & MASK) == FLOAT_TAG);
   return (val >> SHIFT) << SHIFT;

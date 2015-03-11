@@ -1,9 +1,11 @@
 import compiler, sys, re, astpp, os
 from compiler.ast import *
-import flattener
-import colorGraph
-import explicate
 from x86AST import *
+import explicate
+import flattener
+import liveness
+import interference
+import colorGraph
 
 debug = False
 def printd(str):
@@ -23,170 +25,50 @@ class GenSym:
 	def invalidName(self):
 		return "__$tmp_invalid"
 
-def condAdd(set, elm):
-	if elm is not None and elm[0] != "%":
-		set.add(elm)
-
-def liveOneArg(instr, prev):
-	s = set(prev)
-	#All instructions read from the var but negl and popl writes to the var
-	if not isinstance(instr, Pushl):
-		s.discard(instr.reg)
-	condAdd(s, instr.reg)
-	return s
-
-def liveTwoArgs(instr, prev):
-	s = set(prev)
-	s.discard(instr.reg2)
-	condAdd(s, instr.reg1)
-	#movl does not read reg2 but addl/subl do
-	if not isinstance(instr, Movl):
-		condAdd(s, instr.reg2)
-	return s
-
-def liveIf(instr, prev):
-	liveThen = set(prev if prev else [])
-	liveElse = set(prev if prev else [])
-	instr.liveThen = liveness(instr.thenAssign, prev)
-	instr.liveElse = liveness(instr.elseAssign, prev)
-	#TODO remove this hack
-	part1 = liveness([instr.thenAssign[0]], instr.liveThen[0])
-	part2 = liveness([instr.elseAssign[0]], instr.liveElse[0])
-	return part1[0] | part2[0]
-
-#takes in a set of instructions and a set of live variables after the set of instructions
-def liveness(asm, live=set([])):
-	live_after = [0]*len(asm)
-	l = len(live_after) - 1
-	for index, instr in enumerate(reversed(asm)):
-		bases = instr.__class__.__bases__
-		prev = live_after[l-index] if index != 0 else live
-		if len(bases):
-			#compute the liveness of the instruction if it actually does anything to variables
-			#instructions that do not inherit from OneArg, TwoArgs, or Node (If) are not considered
-			#and the result is copied from the previous iteration
-			live_after[l-index-1] = {
-				OneArg:  liveOneArg,
-				TwoArgs: liveTwoArgs,
-				Node:    liveIf
-				}[bases[0]](instr, prev)
-		else:
-			live_after[l-index-1] = prev
-	return live_after
-
-def addEdge(u, v, graph):
-	#if u != "%esp" and u != "%ebp" and v != "%esp" and v != "%ebp":
-	if u in graph:
-		graph[u][0].add(v)
-	else:
-		graph[u] = (set([v]), False)
-
-#guarantees node exists in graph (assuming not %esp, or %ebp)
-def addNode(reg, graph):
-	if reg and not reg in graph: #and reg != "%esp" and reg != "%ebp":
-		graph[reg] = (set(), False)
-
-def interfereNegPop(instr, liveSet, graph):
-	addNode(instr.reg, graph)
-	t = instr.reg
-	for v in liveSet:
-		if v != t:
-			addEdge(t, v, graph)
-			addEdge(v, t, graph)
-
-def interfereMov(instr, liveSet, graph):
-	s = instr.reg1
-	t = instr.reg2
-	addNode(s, graph)
-	addNode(t, graph)
-	for v in liveSet:
-		if v != t and v != s:
-			addEdge(t, v, graph)
-			addEdge(v, t, graph)
-
-def interfereTwoArg(instr, liveSet, graph):
-	s = instr.reg1
-	t = instr.reg2
-	addNode(s, graph)
-	addNode(t, graph)
-	for v in liveSet:
-		if v != t:
-			addEdge(t, v, graph)
-			addEdge(v, t, graph)
-
-def interfereCall(instr, liveSet, graph):
-	for v in liveSet:
-		addEdge("%eax", v, graph)
-		addEdge("%ecx", v, graph)
-		addEdge("%edx", v, graph)
-		addEdge(v, "%eax", graph)
-		addEdge(v, "%ecx", graph)
-		addEdge(v, "%edx", graph)
-
-def interfereIfStmt(instr, liveSet, graph):
-	interfere(instr.thenAssign, instr.liveThen, graph)
-	interfere(instr.elseAssign, instr.liveElse, graph)
-
-def interfere(asm, liveness, graph):
-	interferePass = lambda i,l,g: None
-	for index, instr in enumerate(asm):
-		{
-			Pushl:   interferePass,
-			Popl:    interfereNegPop,
-			Negl:    interfereNegPop,
-			Movl:    interfereMov,
-			Addl:    interfereTwoArg,
-			Subl:    interfereTwoArg,
-			Orl:     interfereTwoArg,
-			Andl:    interfereTwoArg,
-			Xorl:    interfereTwoArg,
-			Cmpl:    interfereTwoArg,
-			Cmovel:  interfereTwoArg,
-			Call:    interfereCall,
-			Leave:   interferePass,
-			Ret:     interferePass,
-			Newline: interferePass,
-			IfStmt:  interfereIfStmt
-		}[instr.__class__](instr, liveness[index], graph)
-	return graph
-
 def spillCode(asm, graph, colors, gen):
-	spilled = False
+	spilled = []
 	newasm = []
 	for index, instr in enumerate(asm):
 		bases = instr.__class__.__bases__
-		if len(bases) and bases[0] == TwoArgs:
-			#Check if variables are on stack
-			if isinstance(instr, IfStmt):
-				thenSpilled, spill1 = spillCode(instr.thenAssign, graph, colors, gen)
-				elseSpilled, spill2 = spillCode(instr.thenAssign, graph, colors, gen)
-				spilled = spilled or spill1 or spill2
-				newasm.append(IfStmt(
-					instr.cond,
-					elseSpilled,
-					thenSpilled,
-					spillCode(instr.elseAssign, graph, colors, gen),
-					instr.liveThen,
-					instr.liveElse
-				))
-			elif isinstance(instr, Cmovel) and instr.reg2 and colors[instr.reg2] > 7:
+		if isinstance(instr, IfStmt):
+			#print "found if"
+			thenSpilled, spill1 = spillCode(instr.thenAssign, graph, colors, gen)
+			elseSpilled, spill2 = spillCode(instr.elseAssign, graph, colors, gen)
+			spilled = spilled + spill1 + spill2
+			newasm.append(IfStmt(
+				instr.test,
+				thenSpilled,
+				elseSpilled,
+				instr.ret,
+				instr.liveThen,
+				instr.liveElse
+			))
+		elif len(bases) and bases[0] == TwoArgs:
+			if isinstance(instr, Cmovel) and instr.reg2 and colors[instr.reg2] > 7:
 				#Apparently, cmovel does not allow a displacement in the destination location
-				spilled = True
+				#print instr
 				spilledvar = gen.inc().name()
+				#print "spilledvar:",spilledvar
+				spilled.append(spilledvar)
 				printd( "in spilled cmovel "+spilledvar)
 				if instr.const1:
 					newasm.append(Cmovel(const1=instr.const1, reg2=spilledvar))
 				else:
 					newasm.append(Cmovel(reg1=instr.reg1, reg2=spilledvar))
-				newasm.append(Movl(reg1=spilledvar, reg2=instr.reg2))
+				newasm.append(Movl(reg1=spilledvar, reg2=instr.reg2,comment="spilled "+instr.reg2+" into "+spilledvar))
 			elif instr.reg1 and instr.reg1 in colors and colors[instr.reg1] > 7 and instr.reg2 and instr.reg2 in colors and colors[instr.reg2] > 7:
-				spilled = True
+				#print instr
 				spilledvar = gen.inc().name()
-				newasm.append(Movl(reg1=instr.reg1,reg2=spilledvar))
+				#print "spilledvar:",spilledvar
+				spilled.append(spilledvar)
+				
+				newasm.append(Movl(reg1=instr.reg1,reg2=spilledvar,comment="spilled "+instr.reg2+" into "+spilledvar))
 				newasm.append(instr.__class__(reg1=spilledvar,reg2=instr.reg2))
 			else:
+				#print "skipping:",instr
 				newasm.append(instr)
 		else:
+			#print "skipping:",instr
 			newasm.append(instr)
 	return newasm, spilled
 
@@ -250,10 +132,11 @@ def assignLocations(asm, color):
 				TwoArgs: locTwoArgs,
 			}[bases[0]](instr, color)
 
+#Spilled is an array of spilled variables
 def assignSpilled(g, spilled):
-	for k in g:
-		if k in spilled:
-			g[k] = (g[k][0], spilled[k][1])
+	#print g
+	for k in spilled:
+		g[k] = (g[k][0] if k in g else set([]), True)
 
 #removes moves between the same registers
 def optimizePass1(asm):
@@ -274,6 +157,21 @@ debugMsg1:
 debugMsg2:
 .asciz "Debug Message 2.\\n"
 .text\n'''
+
+def mainLoop(asm, g, spilled, gen):
+	l = liveness.liveness(asm)
+	#printd("liveness:\n"+str(l))
+	g = interference.interfere(asm, l, {})
+	#add spilled flag to vars in new graph
+	#printd("interfernce:\n"+str(g))
+	assignSpilled(g, spilled)
+	#printd("interfernce:\n"+str(g))
+	colors = colorGraph.color_graph(g)
+	#printd("colors:\n"+str(colors))
+	asm, s = spillCode(asm, g, colors, gen)
+	spilled = spilled + s
+	#print "spilled:",spilled
+	return asm, g, spilled, colors, bool(s)
 
 def compile(ast):
 	gen = GenSym()
@@ -302,25 +200,15 @@ def compile(ast):
 	printd("psuedo asm:")
 	for instr in asm:
 		printd(instr)
-	printd(gen.name())
-	cont = True
-	maxiter = 4
-	iter = 0
-	g = {}
+	#print(gen.name())
+
+	maxiter = 10
+	iter = 1
+	asm, g, spilled, colors, cont = mainLoop(asm, {}, [], gen)
 	while cont and iter != maxiter:
-		printd("Iteration: "+str(iter))
 		iter += 1
-		l = liveness(asm)
-		#printd("liveness:\n"+str(l))
-		spilled = g
-		g = interfere(asm, l, {})
-		#add spilled vars to returned graph
-		#printd("interfernce:\n"+str(g))
-		assignSpilled(g, spilled)
-		#printd("interfernce:\n"+str(g))
-		colors = colorGraph.color_graph(g)
-		#printd("colors:\n"+str(colors))
-		asm, cont = spillCode(asm, g, colors, gen)
+		#print ("Iteration: "+str(iter))
+		asm, g, spilled, colors, cont = mainLoop(asm, g, spilled, gen)
 	
 	if iter == maxiter:
 		print maxiter,"iterations was not enough to assign spilt variables"
@@ -330,7 +218,7 @@ def compile(ast):
 	assignLocations(asm, colors)
 	space = max(0, max(colors.values())-9)*4
 	allocStmt.const1 = space
-	asm = optimizePass1(asm)
+	#asm = optimizePass1(asm)
 	
 	printd("\n\nfinal asm")
 	for instr in asm:
