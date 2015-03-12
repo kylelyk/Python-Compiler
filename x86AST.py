@@ -3,7 +3,7 @@ from compiler.ast import *
 from flattener import IfStmt
 
 def addComment(comment):
-	return ("\t\t#" + comment) if comment else ""
+	return ("#" + comment) if comment else ""
 
 class OneArg(object):
 	def __init__(self, offset = None, const = None, reg = None, comment = ""):
@@ -16,7 +16,7 @@ class OneArg(object):
 	def __str__(self):
 		ret = "\t" + self.name + " "
 		ret += ("$" + str(self.const) if self.const is not None else (str(self.offset) + "(" + self.reg + ")" if self.offset else self.reg))
-		ret = ret.ljust(20)
+		ret = ret.ljust(25)
 		ret += addComment(self.comment)
 		return  ret
 
@@ -53,7 +53,7 @@ class TwoArgs(object):
 		ret += ("$" + str(self.const1)) if self.const1 is not None else (str(self.offset1) + "(" + self.reg1 + ")" if self.offset1 else self.reg1)
 		ret += ", "
 		ret += ("$" + str(self.const2)) if self.const2 is not None else (str(self.offset2) + "(" + self.reg2 + ")" if self.offset2 else self.reg2)
-		ret = ret.ljust(20)
+		ret = ret.ljust(25)
 		ret += addComment(self.comment)
 		return  ret
 
@@ -102,54 +102,54 @@ class Je():
 		self.label = label
 		self.comment = comment
 	def __str__(self):
-		return ("\tje " + self.label).ljust(20) + addComment(self.comment)
+		return ("\tje " + self.label).ljust(25) + addComment(self.comment)
 
 class Jne():
 	def __init__(self, label, comment = ""):
 		self.label = label
 		self.comment = comment
 	def __str__(self):
-		return ("\tjne " + self.label).ljust(20) + addComment(self.comment)
+		return ("\tjne " + self.label).ljust(25) + addComment(self.comment)
 	
 class Jl():
 	def __init__(self, label, comment = ""):
 		self.label = label
 		self.comment = comment
 	def __str__(self):
-		return ("\tjl " + self.label).ljust(20) + addComment(self.comment)
+		return ("\tjl " + self.label).ljust(25) + addComment(self.comment)
 
 class Jmp():
 	def __init__(self, label, comment = ""):
 		self.label = label
 		self.comment = comment
 	def __str__(self):
-		return ("\tjmp " + self.label).ljust(20) + addComment(self.comment)
+		return ("\tjmp " + self.label).ljust(25) + addComment(self.comment)
 
 class Label():
 	def __init__(self, name, comment = ""):
 		self.name = name
 		self.comment = comment
 	def __str__(self):
-		return (self.name + ":").ljust(20) + addComment(self.comment) 
+		return (self.name + ":").ljust(25) + addComment(self.comment) 
 
 class Call():
 	def __init__(self, name, comment = ""):
 		self.name = name
 		self.comment = comment
 	def __str__(self):
-		return ("\tcall " + self.name.name).ljust(20) + addComment(self.comment)
+		return ("\tcall " + self.name.name).ljust(25) + addComment(self.comment)
 
 class Leave():
 	def __init__(self, comment = ""):
 		self.comment = comment
 	def __str__(self):
-		return "\tleave".ljust(20) + addComment(self.comment)
+		return "\tleave".ljust(25) + addComment(self.comment)
 
 class Ret():
 	def __init__(self, comment = ""):
 		self.comment = comment
 	def __str__(self):
-		return "\tret".ljust(20) + addComment(self.comment)
+		return "\tret".ljust(25) + addComment(self.comment)
 
 class Newline():
 	def __init__(self, comment = ""):

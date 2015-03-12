@@ -101,13 +101,12 @@ def explicateCompare(ast, gen):
 				InjectFrom("bool",And([IsType("big", name1), IsType("big", name2)])),
 				InjectFrom("bool", CallFunc(funcname, [ProjectTo("big",name1), ProjectTo("big",name2)])),
 				IfExp(
-					Or([IsType("big", name1), IsType("big", name2)]),
+					InjectFrom("bool",Or([IsType("big", name1), IsType("big", name2)])),
 					Name("False") if op == "==" else Name("True"),
 					Compare(ProjectTo("boolint", name1), [(op, ProjectTo("boolint", name2))])
 				)
 			)
 		))
-	
 
 def explicateOr(ast, gen):
 	#Implements Short-circuiting using nested IfExp's
@@ -156,6 +155,10 @@ def explicateIfExp(ast, gen):
 	
 	return IfExp(InjectFrom("bool", CallFunc(Name("is_true"),[test])),then_node, else_node)
 
+def explicateIf(ast, gen):
+	astpp.printAst(ast)
+	raise NotImplementedError
+
 def explicate(ast, gen):
 	return {
 		Module:   explicateModule,
@@ -175,5 +178,6 @@ def explicate(ast, gen):
 		List:     explicateList,
 		Dict:     explicateDict,
 		Subscript:explicateSubscript,
-		IfExp:    explicateIfExp
+		IfExp:    explicateIfExp,
+		If:       explicateIf
 	}[ast.__class__](ast, gen)

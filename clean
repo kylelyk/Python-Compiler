@@ -1,11 +1,13 @@
 for name in $(find tests -type f \( -name "*.s" -or ! -name "*.*" \));
 do
-	echo rm $name
-	rm $name
+	echo rm "$name"
+	rm "$name"
 done
 
 for name in $(find  \( ! -name . -prune \) -type f \( -name "*.pyc" -or -name "*.out" \));
 do
-	echo rm $name
-	rm $name
+	echo rm "$name"
+	rm "$name"
 done
+
+rm compiler.zip &> /dev/null

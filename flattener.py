@@ -86,8 +86,8 @@ def flatAssName(ast, newast, gen, map):
 
 def flatAssign(ast, newast, gen, map):
 	#TODO remove this hack
-	lhs = flatten(ast.nodes[0], newast, gen, map)
 	rhs = flatten(ast.expr, newast, gen, map)
+	lhs = flatten(ast.nodes[0], newast, gen, map)
 	if isinstance(lhs, Subscript):
 		return flatten(CallFunc(Name("set_subscript"),[lhs.expr, lhs.subs[0], rhs]), newast, gen, map)
 	else:

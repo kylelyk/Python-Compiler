@@ -191,7 +191,7 @@ def compile(ast):
 	printd("psuedo asm:")
 	for instr in asm:
 		printd(instr)
-	print(gen.name())
+	#print(gen.name())
 
 	maxiter = 10
 	iter = 1
