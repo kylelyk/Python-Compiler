@@ -197,6 +197,12 @@ def flatIfExp(ast, newast, gen, map):
 	))
 	return retVar
 
+def flatLambda(ast, newast, gen, map):
+	raise NotImplementedError 
+
+def flatReturn(ast, newast, gen, map):
+	raise NotImplementedError 
+
 def flatGetTag(ast, newast, gen, map):
 	simple = flatten(ast.arg, newast, gen, map)
 	return addAssign(CallFunc(Name("tag"),[simple]), newast, gen, map)
@@ -246,6 +252,8 @@ def flatten(ast, newast, gen, map):
 		Dict:       flatDict,
 		Subscript:  flatSubscript,
 		IfExp:      flatIfExp,
+		Lambda:     flatLambda,
+		Return:     flatReturn,
 		GetTag:     flatGetTag,
 		InjectFrom: flatInjectFrom,
 		ProjectTo:  flatProjectTo,

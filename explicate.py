@@ -159,6 +159,14 @@ def explicateIf(ast, gen):
 	astpp.printAst(ast)
 	raise NotImplementedError
 
+def explicateLambda(ast, gen):
+	astpp.printAst(ast)
+	return Lambda(ast.argnames, ast.defaults, ast.flags, explicate(ast.code, gen))
+
+def explicateReturn(ast, gen):
+	return explicate(ast.value, gen)
+
+
 def explicate(ast, gen):
 	return {
 		Module:   explicateModule,
@@ -179,5 +187,7 @@ def explicate(ast, gen):
 		Dict:     explicateDict,
 		Subscript:explicateSubscript,
 		IfExp:    explicateIfExp,
-		If:       explicateIf
+		If:       explicateIf,
+		Lambda:   explicateLambda,
+		Return:   explicateReturn
 	}[ast.__class__](ast, gen)

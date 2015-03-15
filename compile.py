@@ -1,11 +1,7 @@
 import compiler, sys, re, astpp, os
 from compiler.ast import *
 from x86AST import *
-import explicate
-import flattener
-import liveness
-import interference
-import colorGraph
+import uniquify, heapify, explicate, flattener, liveness, interference, colorGraph
 
 debug = False
 def printd(str):
@@ -13,19 +9,24 @@ def printd(str):
 		print str
 
 class GenSym:
-	def __init__(self):
+	def __init__(self, s):
 		self.n = 0
+		self.s = s
 	def inc(self):
 		self.n += 1
 		return self
+	def dec(self):
+		self.n -= 1
+		return self
 	def name(self):
-		return "__$tmp" + str(self.n)
+		return self.s + str(self.n)
 	def get(self):
 		return str(self.n)
 	def invalidName(self):
 		return "__$tmp_invalid"
 		
 #Stuff for uniquify, generates unique renames (in spirit of GenSym)		
+'''
 class GenName:
 	def __init__(self):
 		self.n = 0
@@ -37,6 +38,7 @@ class GenName:
 		return name + "_" + str(self.n)
 
 gen_n = GenName()
+'''
 
 def spillCode(asm, graph, colors, gen):
 	spilled = []
@@ -178,9 +180,16 @@ def mainLoop(asm, g, spilled, gen):
 	return asm, g, spilled, colors, bool(s)
 
 def compile(ast):
-	gen = GenSym()
+	gen = GenSym("__$tmp")
 	map = {}
 	state = ()
+	
+	uniquify.uniquify(ast, GenSym("_"), {})
+	
+	astpp.printAst(ast)
+	heapify.runHeapify(ast)
+	astpp.printAst(ast)
+	return
 	explicate.explicate(ast, gen)
 	#print "explicated ast:"
 	#astpp.printAst(ast)
@@ -218,7 +227,7 @@ def compile(ast):
 		print maxiter,"iterations was not enough to assign spilt variables"
 		sys.exit(1)
 	
-	asm = removeIf(asm, GenSym())
+	asm = removeIf(asm, GenSym(""))
 	assignLocations(asm, colors)
 	space = max(0, max(colors.values())-9)*4
 	allocStmt.const1 = space
