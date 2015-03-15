@@ -19,9 +19,7 @@ def free_vars_stmt(stmt):
         else:
             fv = fv | free_vars(n)
     return fv - bv
-    
-    
-#returns a tuple of sets, one free_vars and one bound_vars
+   
 def free_vars(n):
     if isinstance(n, Module):
         return free_vars(n.node)
