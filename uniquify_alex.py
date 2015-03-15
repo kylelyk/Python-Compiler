@@ -97,7 +97,7 @@ def uni_trav(n, b_list = set([])):
         bd_list = set(n.argnames)
         func_dict = uniquify_wrap(n.code, bd_list)
         #And rename the arguments to whatever we named inside uni. wrap 
-        new_arg_list = [func_dict[e] for e in n.argnames if e in func_dict]
+        new_arg_list = [(func_dict[e] if e in func_dict else e) for e in n.argnames ]
         n.argnames = new_arg_list
         return set([])
     elif isinstance(n, Return):
