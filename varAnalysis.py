@@ -80,7 +80,7 @@ def varsLambda(ast):
 def varsReturn(ast):
 	return set(), getVars(ast.value)
 
-#Returns a tuple of: set of all variables written to, set of all free variables
+#Returns a tuple of: set of all variables written to, set of all variables read from
 #In the current scope only and does not recurse on functions and lambda's
 #NOTE: only assign, stmt, and module return a tuple, all others return a single
 #set since they know that all variables they come across are read from

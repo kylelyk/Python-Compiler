@@ -138,4 +138,3 @@ def uniquify(ast, gen, names):
 		Lambda:    uniquifyLambda,
 		Return:    uniquifyReturn
 	}[ast.__class__](ast, gen, names)
->>>>>>> Stashed changes
