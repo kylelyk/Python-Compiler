@@ -208,4 +208,12 @@ def runHeapify(ast):
 	#Now that we have a set of vars that need to be heapified, recurse through the tree
 	
 	heapify(ast, heapVars)
+	
+	#Now initalize all heapVars at the start of the program
+	#i.e prepend h_1 = [0], h_2 = [0] etc. to our outermost stmt node
+	for var_name in heapVars:
+		stmt_array = ast.node.nodes
+		new_ass_node = Assign([AssName(var_name, 'OP_ASSIGN')], List([Const(0)]))
+		ast.node.nodes = [new_ass_node] + ast.node.nodes
+	
 	return ast
