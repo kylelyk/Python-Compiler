@@ -198,10 +198,16 @@ def flatIfExp(ast, newast, gen, map):
 	return retVar
 
 def flatLambda(ast, newast, gen, map):
+	#Shouldn't reach here
 	raise NotImplementedError 
 
+def flatModLambda(ast, newast, gen, map):
+	#Keep the flattens inside the body; we don't want to add flattened statements outside of the function
+	flat_body = flatten(ast.body, Stmt([]), gen, map)
+	return ModLambda(ast.params, ast.paramAllocs, ast.paramInits, ast.localInits, flat_body)
+
 def flatReturn(ast, newast, gen, map):
-	raise NotImplementedError 
+	return Return(flatten(ast.value, newast, gen, map))
 
 def flatGetTag(ast, newast, gen, map):
 	simple = flatten(ast.arg, newast, gen, map)
@@ -253,6 +259,7 @@ def flatten(ast, newast, gen, map):
 		Subscript:  flatSubscript,
 		IfExp:      flatIfExp,
 		Lambda:     flatLambda,
+		ModLambda:  flatModLambda,
 		Return:     flatReturn,
 		GetTag:     flatGetTag,
 		InjectFrom: flatInjectFrom,
