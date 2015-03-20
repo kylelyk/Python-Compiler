@@ -1,4 +1,5 @@
 from compiler.ast import *
+import astpp
 
 #helper to combine the 2-tuple's innards
 def combine(first, second):
@@ -65,7 +66,6 @@ def varsDict(ast):
 	return reduce(lambda acc, (k,v): acc | getVars(k) | getVars(v), ast.items, set([]))
 
 def varsSubscript(ast):
-	print "varsSubscript:",ast
 	return getVars(ast.expr) | getVars(ast.subs[0])
 
 def varsIfExp(ast):
@@ -82,10 +82,7 @@ def varsReturn(ast):
 
 #Returns a tuple of: set of all variables written to, set of all variables read from
 #In the current scope only and does not recurse on functions and lambda's
-#NOTE: only assign, stmt, and module return a tuple, all others return a single
-#set since they know that all variables they come across are read from
 def getVars(ast):
-	#print "getvars:",astpp.printAst(ast)
 	return {
 		Module:    varsModule,
 		Stmt:      varsStmt,

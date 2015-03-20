@@ -24,21 +24,7 @@ class GenSym:
 		return str(self.n)
 	def invalidName(self):
 		return "__$tmp_invalid"
-		
-#Stuff for uniquify, generates unique renames (in spirit of GenSym)		
-'''
-class GenName:
-	def __init__(self):
-		self.n = 0
-	def inc(self):
-		self.n += 1
-		return self
-	def new_name(self, name):
-		self.inc()
-		return name + "_" + str(self.n)
 
-gen_n = GenName()
-'''
 
 def spillCode(asm, graph, colors, gen):
 	spilled = []
@@ -186,14 +172,16 @@ def compile(ast):
 	
 	uniquify.uniquify(ast, GenSym("_"), {})
 	
-	astpp.printAst(ast)
-	heapify.runHeapify(ast)
-	astpp.printAst(ast)
-	return
+	print "\n\n",ast,"\n" #astpp.printAst(ast)
 	explicate.explicate(ast, gen)
+	print "\n\nAfter explicate:",ast,"\n" #astpp.printAst(ast)
+	heapify.runHeapify(ast)
+	print "\n\n",ast,"\n" #astpp.printAst(ast)
+	return
 	#print "explicated ast:"
 	#astpp.printAst(ast)
 	newast = flattener.flatten(ast, None, gen, map)
+	astpp.printAst(ast)
 	#print "flattened ast:"
 	#astpp.printAst(newast)
 	asm = []

@@ -1,30 +1,7 @@
 from compiler.ast import *
-from compiler.visitor import *
-import compiler
-import varAnalysis
-
-class ModLambda(Node):
-	'''test needs to be a name but is made into an instruction in 
-	pyToAsm (spillCode function needs this);
-	ret needs to be a variable name;
-	thenAssign and elseAssign need to be lists of assignments/asm instructions
-	that would be executed on that branch.'''
-	def __init__(self, params, paramAllocs, paramInits, localInits, body):
-		self.params = params
-		self.paramAllocs = paramAllocs
-		self.paramInits = paramInits
-		self.localInits = localInits
-		self.body = body
-	def getChildren(self):
-		return (self.params, self.paramAllocs, self.paramInits, self.localInits, self.body)
-	def __str__(self):
-		ret = "lambda "+str(self.params)+" : \n"
-		ret += "\t" + str(paramAllocs) + "\n"
-		ret += "\t" + str(paramInits) + "\n"
-		ret += "\t" + str(localInits) + "\n"
-		for instr in self.body:
-			ret += +"\t" + str(instr) + "\n"
-		return ret
+from HelperClasses import *
+from compiler.ast import *
+import varAnalysis, astpp
 
 def glModule(ast, scope):
 	return getLambdas(ast.node)
@@ -63,19 +40,13 @@ def glCallFunc(ast, scope):
 	return reduce(lambda acc, n : acc + getLambdas(n, scope), ast.args, [])
 
 def glCompare(ast, scope):
-	left_gl = getLambdas(ast.expr, scope)
-	right_gl = getLambdas(ast.op[0][1], scope) 
-	return left_gl + right_gl
+	return getLambdas(ast.expr, scope) + getLambdas(ast.op[0][1], scope)
 
 def glOr(ast, scope):
-	left_gl = getLambdas(ast.nodes[0], scope)
-	right_gl = getLambdas(ast.nodes[1], scope)
-	return left_gl + right_gl
+	return getLambdas(ast.nodes[0], scope) + getLambdas(ast.nodes[1], scope)
 
 def glAnd(ast, scope):
-	left_gl = getLambdas(ast.nodes[0], scope)
-	right_gl = getLambdas(ast.nodes[1], scope)
-	return left_gl + right_gl
+	return getLambdas(ast.nodes[0], scope) + getLambdas(ast.nodes[1], scope)
 
 def glNot(ast, scope):
 	return getLambdas(ast.expr, scope)
@@ -88,8 +59,7 @@ def glDict(ast, scope):
 	return reduce(lambda acc, n : acc + getLambdas(n[1], scope), ast.items, [])
 
 def glSubscript(ast, scope):
-	#Pretty sure there can't be a function definition in a subscript.	
-	return []
+	return getLambdas(ast.expr, scope) + getLambdas(ast.subs[0], scope)
 
 def glIfExp(ast, scope):
 	test_gl = getLambdas(ast.test, scope)
@@ -156,10 +126,11 @@ def heapifyDiscard(ast, names):
 
 def heapifyAssign(ast, names):
 	#
+	print "heapify:",ast
 	lhs = ast.nodes[0]
 	if isinstance(lhs, AssName):
 		if lhs.name in names:
-			return Assign(Subscript(lhs, "OP_ASSIGN", [Const(0)]), heapify(ast.expr, names))
+			return Assign([Subscript(lhs, "OP_ASSIGN", [Const(0)])], heapify(ast.expr, names))
 		else:
 			return Assign([lhs], heapify(ast.expr, names))
 	else:
@@ -212,9 +183,7 @@ def heapifyLambda(ast, names):
 	if not isinstance(ast.code, Stmt):
 		ast.code = Stmt([Return(ast.code)])
 	heapParams = [p in names for p in ast.argnames]
-	#print "heapParams:",heapParams
 	pPrime = [p+"_heap" if heapParams[i] else p for i, p in enumerate(ast.argnames)]
-	#print "pPrime:",pPrime
 	l, _ = varAnalysis.getVars(ast.code)
 	l_h = l & names
 	p_h = [p for p in ast.argnames if p in names]
@@ -266,7 +235,8 @@ def runHeapify(ast):
 	lambdas = getLambdas(ast.node, 0)
 	for n, s in lambdas:
 		s = str(s)
-		print n
+		print "Processing lambda"
+		astpp.printAst(n.code)
 		read, write = varAnalysis.getVars(n.code)
 		for var in read | write:
 			print var

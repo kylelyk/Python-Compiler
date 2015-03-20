@@ -1,41 +1,6 @@
 from compiler.ast import *
+from HelperClasses import *
 import astpp
-
-class GetTag(Node):
-	def __init__(self, arg):
-		self.arg = arg
-	def getChildren(self):
-		return (self.arg,)
-class InjectFrom(Node):
-	def __init__(self, typ, arg):
-		self.typ = typ
-		self.arg = arg
-	def getChildren(self):
-		return (self.typ, self.arg)
-class ProjectTo(Node):
-	def __init__(self, typ, arg):
-		self.typ = typ
-		self.arg = arg
-	def getChildren(self):
-		return (self.typ, self.arg)
-class Let(Node):
-	def __init__(self, var, rhs, body):
-		self.var = var
-		self.rhs = rhs
-		self.body = body
-	def getChildren(self):
-		return (self.var, self.rhs, self.body)
-class IsType(Node):
-	def __init__(self, typ, arg):
-		self.typ = typ
-		self.arg = arg
-	def getChildren(self):
-		return (self.typ, self.arg)
-class ThrowError(Node):
-	def __init__(self, msg):
-		self.msg = msg
-	def getChildren(self):
-		return (self.msg,)
 
 def explicateModule(ast, gen):
 	ast.node = explicate(ast.node, gen)
@@ -78,6 +43,7 @@ def explicateDiscard(ast, gen):
 	return Discard(explicate(ast.expr,gen))
 
 def explicateAssign(ast, gen):
+	print ast
 	return Assign([ast.nodes[0]], explicate(ast.expr, gen))
 
 def explicateName(ast, gen):
@@ -156,15 +122,13 @@ def explicateIfExp(ast, gen):
 	return IfExp(InjectFrom("bool", CallFunc(Name("is_true"),[test])),then_node, else_node)
 
 def explicateIf(ast, gen):
-	astpp.printAst(ast)
 	raise NotImplementedError
 
 def explicateLambda(ast, gen):
-	astpp.printAst(ast)
 	return Lambda(ast.argnames, ast.defaults, ast.flags, explicate(ast.code, gen))
 
 def explicateReturn(ast, gen):
-	return explicate(ast.value, gen)
+	return Return(explicate(ast.value, gen))
 
 
 def explicate(ast, gen):

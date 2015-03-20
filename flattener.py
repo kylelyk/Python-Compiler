@@ -1,36 +1,8 @@
 import compiler
 from compiler.ast import *
-from explicate import *
+from HelperClasses import *
 
 debug = False
-#Flattened version of IfExp
-#Is reused for both python ast and asm instructions
-class IfStmt(Node):
-	'''test needs to be a name but is made into an instruction in 
-	pyToAsm (spillCode function needs this);
-	ret needs to be a variable name;
-	thenAssign and elseAssign need to be lists of assignments/asm instructions
-	that would be executed on that branch.'''
-	def __init__(self, test, thenAssign, elseAssign, ret, liveThen, liveElse):
-		self.test = test
-		self.thenAssign = thenAssign
-		self.elseAssign = elseAssign
-		self.ret = ret
-		self.liveThen = liveThen
-		self.liveElse = liveElse
-	def getChildren(self):
-		return (self.test, self.thenAssign, self.elseAssign, self.ret, self.liveThen, self.liveElse)
-	def __str__(self):
-		ret = "if "+str(self.test)+":\n"
-		for instr in self.thenAssign:
-			ret += str(instr) + "\n"
-		ret += "\treturn "+str(self.ret)
-		ret += "\nelse:\n"
-		for instr in self.elseAssign:
-			ret += str(instr) + "\n"
-		ret += "\treturn "+str(self.ret)
-		ret += "\nendif"
-		return ret
 
 def addAssign(node, newast, gen, map, name = None):
 	if not name:
@@ -203,9 +175,11 @@ def flatLambda(ast, newast, gen, map):
 
 def flatModLambda(ast, newast, gen, map):
 	#Keep the flattens inside the body; we don't want to add flattened statements outside of the function
-	flat_body = flatten(ast.body, Stmt([]), gen, map)
+	flat_body = Stmt([])
+	flat_body += flatten(ast.body, flat_body, gen, map)
 	return ModLambda(ast.params, ast.paramAllocs, ast.paramInits, ast.localInits, flat_body)
 
+#Have to break the contract here
 def flatReturn(ast, newast, gen, map):
 	return Return(flatten(ast.value, newast, gen, map))
 

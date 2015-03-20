@@ -1,6 +1,6 @@
 import compiler
 from compiler.ast import *
-from flattener import IfStmt
+from HelperClasses import *
 
 def addComment(comment):
 	return ("#" + comment) if comment else ""
