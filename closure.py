@@ -1,7 +1,19 @@
-def closureModule(ast):
+from compiler.ast import *
+from HelperClasses import *
+from compiler.ast import *
+import varAnalysis, astpp
+
+def addNewVars(ast, l):
 	#go through the top level scope and add the variables to the dictionary
-	addNewVars(ast.node)
-	ast.node = closure(ast.node)
+	for (funcName, funcDef) in l:
+		assign_f = Assign([AssName(funcName, 'OP_ASSIGN')], funcDef)
+		ast.node.nodes = [assign_f] + ast.node.nodes
+	return ast
+
+def closureModule(ast):
+	ast, l = closure(ast.node)
+	ast = addNewVars(ast, l)
+	return ast
 
 def closureStmt(ast):
 	listtTup = [closure(n) for n in ast.nodes]
@@ -29,8 +41,8 @@ def closureDiscard(ast):
 	return Discard(ast), l
 
 def closureAssign(ast):
-	ast, l = closure(ast.expr)
-	return Assign([ast.nodes[0]], ast), l
+	astN, l = closure(ast.expr)
+	return Assign([ast.nodes[0]], astN), l
 
 def closureName(ast):
 	return ast,[]
@@ -39,7 +51,8 @@ def closureAssName(ast):
 	return ast, []
 
 def closureCallFunc(ast):
-	return CallFunc(closure(ast.node), [closure(arg) for arg in ast.args])
+	raise NotImplementedError
+	#return CallFunc(closure(ast.node), [closure(arg) for arg in ast.args])
 
 def closureCompare(ast):
 	ast_left, l_left = closure(ast.expr)
@@ -75,8 +88,8 @@ def closureDict(ast):
 	return Dict(new_items), l
 
 def closureSubscript(ast):
-	ast, l = closure(ast.expr)
-	return Subscript(ast, ast.flags, ast.subs), l
+	astN, l = closure(ast.expr)
+	return Subscript(astN, ast.flags, ast.subs), l
 
 def closureIfExp(ast):
 	ast_test, l_test = closure(ast.test)
@@ -86,8 +99,36 @@ def closureIfExp(ast):
 	return IfExp(ast_test, ast_then, ast_else_), l_test+l_then+l_else_
 
 def closureModLambda(ast):
-	return 
-
+	#First recurse into the body
+	new_body, l_body = closure(ast.body)
+	
+	#TODO Actually generate a unique free_vars name (generate X)
+	gen_int = X = str(0)
+	
+	written_to, read_from = varAnalysis.getvars(ast.body)
+	free_vars = list((read_from - written_to) - set(ast.params))
+	free_vars_param = 'free_vars_' + gen_int
+	
+	#Add the free_var assignments to the start of the body
+	#i.e x = free_vars_X[0]; y = free_vars_X[1]
+	i = 0
+	for var in free_vars:
+		n_assign = Assign([var], Subscript(Name(free_vars_param), 'OP_APPLY', [Const(i)]))
+		newBody = Stmt(n_assign + new_body.nodes)
+		i = i + 1
+	
+	#Create the function definition for the top level scope
+	#NOTE: I believe we add the name of the free_vars list here,
+	#not the actual list itself. Correct if wrong.
+	newParams = [free_vars_param] + ast.params
+	funcDef = ModLambda(newParams, ast.paramAllocs, ast.paramInit, ast.localInits, newBody)
+	
+	#Create the local, closure convention'd reference to the function
+	funcName = "lambda_" + gen_int
+	closedLambda = CallFunc(Name('create_closure'),[funcName, free_vars])
+	return closedLambda, l_body + [(funcName, funcDef)]
+	
+	
 def closureReturn(ast):
 	#print ast
 	ast, l = closure(ast.value)
@@ -98,12 +139,12 @@ def closureGetTag(ast):
 	return GetTag(ast), l
 
 def closureInjectFrom(ast):
-	ast, l = closure(ast.arg)
-	return InjectFrom(ast.typ, ast), l
+	astN, l = closure(ast.arg)
+	return InjectFrom(ast.typ, astN), l
 
 def closureProjectTo(ast):
-	ast, l = closure(ast.arg)
-	return ProjectTo(ast.typ, ast), l
+	astN, l = closure(ast.arg)
+	return ProjectTo(ast.typ, astN), l
 
 def closureLet(ast):
 	ast_rhs, l_rhs = closure(ast.rhs)
@@ -111,15 +152,14 @@ def closureLet(ast):
 	return Let(ast.var, ast_rhs, ast_body), l_rhs+l_body
 
 def closureIsType(ast):
-	ast, l = closure(ast.arg)
-	return IsType(ast.typ, ast), l
+	astN, l = closure(ast.arg)
+	return IsType(ast.typ, astN), l
 
 def closureThrowError(ast):
 	return ast
 
-
-#names is a dictionary which keeps track of all variables seen
-#so far and what they should be renamed to
+#The function list is given as a tuple of (FuncName, Lambda)
+#Where FuncName is the name the Lambda is to be assigned to
 def closure(ast):
 	 #astpp.printAst(ast)
 	return {
@@ -133,7 +173,7 @@ def closure(ast):
 		Assign:    closureAssign,
 		Name:      closureName,
 		AssName:   closureAssName,
-		CallFunc:  closureCallFunc,
+		CallFunc:  closureCallFunc, #TODO
 		Compare:   closureCompare,
 		Or:        closureOr,
 		And:       closureAnd,
@@ -151,3 +191,4 @@ def closure(ast):
 		IsType:     closureIsType,
 		ThrowError: closureThrowError
 	}[ast.__class__](ast)
+	

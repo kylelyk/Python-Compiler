@@ -124,6 +124,7 @@ def explicateIfExp(ast, gen):
 def explicateIf(ast, gen):
 	raise NotImplementedError
 
+#Convert these into a common lambda function
 def explicateLambda(ast, gen):
 	return Lambda(ast.argnames, ast.defaults, ast.flags, explicate(ast.code, gen))
 

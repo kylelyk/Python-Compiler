@@ -1,7 +1,7 @@
 import compiler, sys, re, astpp, os
 from compiler.ast import *
 from x86AST import *
-import uniquify, heapify, explicate, flattener, liveness, interference, colorGraph
+import closure, uniquify, heapify, explicate, flattener, liveness, interference, colorGraph
 
 debug = False
 def printd(str):
@@ -177,6 +177,7 @@ def compile(ast):
 	print "\n\nAfter explicate:",ast,"\n" #astpp.printAst(ast)
 	heapify.runHeapify(ast)
 	print "\n\n",ast,"\n" #astpp.printAst(ast)
+	#closure.closure(ast)
 	return
 	#print "explicated ast:"
 	#astpp.printAst(ast)
