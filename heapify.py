@@ -73,7 +73,24 @@ def glLambda(ast, scope):
 def glReturn(ast, scope):
 	return getLambdas(ast.value, scope)
 
+def glGetTag(ast, scope):
+	return getLambdas(ast.arg, scope)
 
+def glInjectFrom(ast, scope):
+	return getLambdas(ast.arg, scope)
+
+def glProjectTo(ast, scope):
+	return getLambdas(ast.arg, scope)
+
+def glLet(ast, scope):
+	return getLambdas(ast.rhs, scope) + getLambdas(ast.body, scope)
+
+def glIsType(ast, scope):
+	return getLambdas(ast.arg, scope)
+
+def glThrowError(ast, scope):
+	return []
+	
 #Finds all lambda's in the tree, returns a list of tuples: (lambda, scope level)
 def getLambdas(ast, scope):
 	glPass = lambda a, s: []
@@ -98,7 +115,13 @@ def getLambdas(ast, scope):
 		Subscript: glSubscript,
 		IfExp:     glIfExp,
 		Lambda:    glLambda,
-		Return:    glReturn
+		Return:    glReturn,
+		GetTag:     glGetTag,
+		InjectFrom: glInjectFrom,
+		ProjectTo:  glProjectTo,
+		Let:        glLet,
+		IsType:     glIsType,
+		ThrowError: glThrowError
 	}.get(ast.__class__, glPass)(ast, scope)
 
 
@@ -125,7 +148,6 @@ def heapifyDiscard(ast, names):
 	return Discard(heapify(ast.expr, names))
 
 def heapifyAssign(ast, names):
-	#
 	print "heapify:",ast
 	lhs = ast.nodes[0]
 	if isinstance(lhs, AssName):
@@ -197,6 +219,25 @@ def heapifyReturn(ast, names):
 	print ast
 	return Return(heapify(ast.value, names))
 
+def heapifyGetTag(ast, names):
+	return GetTag(heapify(ast.arg))
+
+def heapifyInjectFrom(ast, names):
+	return InjectFrom(ast.typ, heapify(ast.arg, names))
+
+def heapifyProjectTo(ast, names):
+	return ProjectTo(ast.typ, heapify(ast.arg, names))
+
+#Iffy about this one. Does Let handle subscripts?
+def heapifyLet(ast, names):
+	return Let(heapify(ast.var, names), heapify(ast.rhs, names), heapify(ast.body, names))
+
+def heapifyIsType(ast, names):
+	return IsType(ast.typ, heapify(ast.arg, names))
+
+def heapifyThrowError(ast, names):
+	return ast
+
 def heapify(ast, names):
 	return {
 		Module:    heapifyModule,
@@ -219,7 +260,13 @@ def heapify(ast, names):
 		Subscript: heapifySubscript,
 		IfExp:     heapifyIfExp,
 		Lambda:    heapifyLambda,
-		Return:    heapifyReturn
+		Return:    heapifyReturn,
+		GetTag:     heapifyGetTag,
+		InjectFrom: heapifyInjectFrom,
+		ProjectTo:  heapifyProjectTo,
+		Let:        heapifyLet,
+		IsType:     heapifyIsType,
+		ThrowError: heapifyThrowError
 	}[ast.__class__](ast, names)
 
 #find all lambda's, and recurse repeatedly on them

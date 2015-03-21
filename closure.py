@@ -81,7 +81,7 @@ def closureSubscript(ast):
 def closureIfExp(ast):
 	ast_test, l_test = closure(ast.test)
 	ast_then, l_then = closure(ast.then)
-	ast_else_, l_else_ = close(ast.else_)
+	ast_else_, l_else_ = closure(ast.else_)
 	
 	return IfExp(ast_test, ast_then, ast_else_), l_test+l_then+l_else_
 
@@ -92,6 +92,31 @@ def closureReturn(ast):
 	#print ast
 	ast, l = closure(ast.value)
 	return Return(ast), l
+
+def closureGetTag(ast):
+	ast, l = closure(ast.arg)
+	return GetTag(ast), l
+
+def closureInjectFrom(ast):
+	ast, l = closure(ast.arg)
+	return InjectFrom(ast.typ, ast), l
+
+def closureProjectTo(ast):
+	ast, l = closure(ast.arg)
+	return ProjectTo(ast.typ, ast), l
+
+def closureLet(ast):
+	ast_rhs, l_rhs = closure(ast.rhs)
+	ast_body, l_body = closure(ast.body)
+	return Let(ast.var, ast_rhs, ast_body), l_rhs+l_body
+
+def closureIsType(ast):
+	ast, l = closure(ast.arg)
+	return IsType(ast.typ, ast), l
+
+def closureThrowError(ast):
+	return ast
+
 
 #names is a dictionary which keeps track of all variables seen
 #so far and what they should be renamed to
@@ -118,5 +143,11 @@ def closure(ast):
 		Subscript: closureSubscript,
 		IfExp:     closureIfExp,
 		ModLambda: closureModLambda,
-		Return:    closureReturn
+		Return:    closureReturn,
+		GetTag:     closureGetTag,
+		InjectFrom: closureInjectFrom,
+		ProjectTo:  closureProjectTo,
+		Let:        closureLet,
+		IsType:     closureIsType,
+		ThrowError: closureThrowError
 	}[ast.__class__](ast)
