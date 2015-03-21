@@ -113,7 +113,7 @@ def closureModLambda(ast):
 	#i.e x = free_vars_X[0]; y = free_vars_X[1]
 	i = 0
 	for var in free_vars:
-		n_assign = Assign([var], Subscript(Name(free_vars_param), 'OP_APPLY', [Const(i)]))
+		n_assign = Assign([AssName(var, 'OP_ASSIGN')], Subscript(Name(free_vars_param), 'OP_APPLY', [Const(i)]))
 		newBody = Stmt(n_assign + new_body.nodes)
 		i = i + 1
 	
