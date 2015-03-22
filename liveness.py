@@ -9,7 +9,10 @@ def liveOneArg(instr, prev):
 	#All instructions read from the var but negl and popl writes to the var
 	if not isinstance(instr, Pushl):
 		s.discard(instr.reg)
-	condAdd(s, instr.reg)
+	
+	#Regular calls should not add an edge
+	if not isinstance(instr, Call) or instr.star:
+		condAdd(s, instr.reg)
 	return s
 
 def liveTwoArgs(instr, prev):

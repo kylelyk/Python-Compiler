@@ -11,11 +11,11 @@ class ModLambda(Node):
 		return (self.params, self.paramAllocs, self.paramInits, self.localInits, self.body)
 	def __str__(self):
 		ret = "lambda "+str(self.params)+" : \n"
-		ret += "\t" + str(paramAllocs) + "\n"
-		ret += "\t" + str(paramInits) + "\n"
-		ret += "\t" + str(localInits) + "\n"
+		ret += "\t" + str(self.paramAllocs) + "\n"
+		ret += "\t" + str(self.paramInits) + "\n"
+		ret += "\t" + str(self.localInits) + "\n"
 		for instr in self.body:
-			ret += +"\t" + str(instr) + "\n"
+			ret += "\t" + str(instr) + "\n"
 		return ret
 
 #Flattened version of IfExp
@@ -93,4 +93,12 @@ class ThrowError(Node):
 	def getChildren(self):
 		return (self.msg,)
 	def __str__(self):
-		return "ProjectTo("+str(self.msg)+")"
+		return "ThrowError("+str(self.msg)+")"
+class CallRuntime(Node):
+	def __init__(self, node, args):
+		self.node = node
+		self.args = args
+	def getChildren(self):
+		return (self.node, self.args)
+	def __str__(self):
+		return "CallRuntime("+str(self.node)+", "+str(self.args)+")"

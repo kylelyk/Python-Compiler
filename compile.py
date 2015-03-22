@@ -83,6 +83,9 @@ def removeIf(asm, gen):
 	return newasm
 
 def locOneArg(instr, color):
+	if isinstance(instr, Call) and not instr.star:
+		return
+	
 	if instr.reg and instr.reg != "%esp" and instr.reg != "%ebp":
 		if instr.reg in color:
 			loc = color[instr.reg]
@@ -116,7 +119,6 @@ def locTwoArgs(instr, color):
 		else:
 			instr.reg2 = colorGraph.reg_map[loc]
 
-
 def assignLocations(asm, color):
 	for instr in asm:
 		bases = instr.__class__.__bases__
@@ -125,6 +127,8 @@ def assignLocations(asm, color):
 				OneArg:  locOneArg,
 				TwoArgs: locTwoArgs,
 			}[bases[0]](instr, color)
+		elif isinstance(instr, Call) and instr.star:
+			locCall(instr, color)
 
 #Spilled is an array of spilled variables
 def assignSpilled(g, spilled):
@@ -151,86 +155,99 @@ debugMsg2:
 .asciz "Debug Message 2.\\n"
 .text\n'''
 
-def mainLoop(asm, g, spilled, gen):
-	l = liveness.liveness(asm)
-	#printd("liveness:\n"+str(l))
-	g = interference.interfere(asm, l, {})
-	#add spilled flag to vars in new graph
-	#printd("interfernce:\n"+str(g))
-	assignSpilled(g, spilled)
-	#printd("interfernce:\n"+str(g))
-	colors = colorGraph.color_graph(g)
-	#printd("colors:\n"+str(colors))
-	asm, s = spillCode(asm, g, colors, gen)
-	spilled = spilled + s
-	return asm, g, spilled, colors, bool(s)
+def mainLoop(asm, spilled, gen):
+	newasm = []
+	for n, a, alloc, colors in asm:
+		l = liveness.liveness(a)
+		#print l
+		#printd("liveness:\n"+str(l))
+		g = interference.interfere(a, l, {})
+		#add spilled flag to vars in new graph
+		#printd("interfernce:\n"+str(g))
+		assignSpilled(g, spilled)
+		#printd("interfernce:\n"+str(g))
+		colors = colorGraph.color_graph(g)
+		#printd("colors:\n"+str(colors))
+		a, s = spillCode(a, g, colors, gen)
+		spilled = spilled + s
+		newasm.append((n, a, alloc, colors))
+	return newasm, g, spilled, colors, bool(s)
 
 def compile(ast):
 	gen = GenSym("__$tmp")
 	map = {}
 	state = ()
 	
+	#print "\n\n",ast,"\n" #astpp.printAst(ast)
 	uniquify.uniquify(ast, GenSym("_"), {})
 	
-	print "\n\n",ast,"\n" #astpp.printAst(ast)
 	explicate.explicate(ast, gen)
-	print "\n\nAfter explicate:",ast,"\n" #astpp.printAst(ast)
+	#print "\n\nAfter explicate:",ast,"\n" #astpp.printAst(ast)
 	heapify.runHeapify(ast)
-	print "\n\n",ast,"\n" #astpp.printAst(ast)
-	#closure.closure(ast)
-	return
+	ast = closure.closure(ast, gen, GenSym("lambda"))
+	#print "before:"
+	#for n, a in ast:
+	#	print "\n\n",n,"= ",astpp.printAst(a)
 	#print "explicated ast:"
 	#astpp.printAst(ast)
-	newast = flattener.flatten(ast, None, gen, map)
-	astpp.printAst(ast)
+	newast = flattener.runFlatten(ast, gen, map)
+	#print "after:"
+	#for n, a in newast:
+	#	print "\n\n",n,"= ",astpp.printAst(a)
 	#print "flattened ast:"
 	#astpp.printAst(newast)
 	asm = []
-	asm.append(Pushl(reg="%ebp"))
-	asm.append(Movl(reg1="%esp", reg2="%ebp"))
-	allocStmt = Subl(const1=0, reg2="%esp")
-	asm.append(allocStmt)
-	asm.append(Newline())
-	asm.append(Movl(const1=0b001, reg2="False"))
-	asm.append(Movl(const1=0b101, reg2="True"))
-	pyToAsm(newast, None, asm, map)
-	asm.append(Newline())
-	asm.append(Movl(const1=0, reg2="%eax"))
-	asm.append(Leave())
-	asm.append(Ret())
+	pyToAsm(newast, asm, map)
 	
 	printd("psuedo asm:")
-	for instr in asm:
-		printd(instr)
-	#print(gen.name())
-
+	#print asm
+	#TODO clean this up
+	newasm = []
+	for n, a, alloc in asm:
+		newasm.append((n, a, alloc, {}))
+		for instr in a:
+			printd(instr)
+	asm = newasm
+	
 	maxiter = 10
 	iter = 1
-	asm, g, spilled, colors, cont = mainLoop(asm, {}, [], gen)
+	asm, g, spilled, colors, cont = mainLoop(asm, [], gen)
 	while cont and iter != maxiter:
 		iter += 1
 		#print ("Iteration: "+str(iter))
-		asm, g, spilled, colors, cont = mainLoop(asm, g, spilled, gen)
+		asm, g, spilled, colors, cont = mainLoop(asm, spilled, gen)
 	
 	if iter == maxiter:
 		print maxiter,"iterations was not enough to assign spilt variables"
 		sys.exit(1)
 	
-	asm = removeIf(asm, GenSym(""))
-	assignLocations(asm, colors)
-	space = max(0, max(colors.values())-9)*4
-	allocStmt.const1 = space
-	asm = optimizePass1(asm)
-	
+	newasm = []
+	for n, a, alloc, colors in asm:
+		a = removeIf(a, GenSym(""))
+		assignLocations(a, colors)
+		space = max(0, max(colors.values())-9)*4
+		for instr in alloc:
+			instr.const1 = space
+		#a = optimizePass1(a)
+		newasm.append((n, a))
+	asm = newasm
 	printd("\n\nfinal asm")
-	for instr in asm:
-		printd(instr)
+	for _, func in asm:
+		#print func
+		for instr in func:
+			printd(instr)
+	#return
 	
 	f = open(re.split("\.[^\.]*$", sys.argv[1])[0]+".s", "w")
 	f.write(addDataSection())
-	f.write(".globl main\nmain:\n")
-	for instr in asm:
-		f.write(str(instr)+"\n")
+	f.write(".globl ")
+	for n, _ in asm:
+		f.write(n+",")
+	f.seek(-1,1)
+	f.write("\n")
+	for _, func in asm:
+		for instr in func:
+			f.write(str(instr)+"\n")
 	
 	f.close()
 

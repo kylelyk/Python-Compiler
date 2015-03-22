@@ -41,6 +41,7 @@ def interfereTwoArg(instr, liveSet, graph):
 			addEdge(v, t, graph)
 
 def interfereCall(instr, liveSet, graph):
+	t = instr.reg
 	for v in liveSet:
 		addEdge("%eax", v, graph)
 		addEdge("%ecx", v, graph)
@@ -48,6 +49,9 @@ def interfereCall(instr, liveSet, graph):
 		addEdge(v, "%eax", graph)
 		addEdge(v, "%ecx", graph)
 		addEdge(v, "%edx", graph)
+		if instr.star and v != t:
+			addEdge(t, v, graph)
+			addEdge(v, t, graph)
 
 def interfereIfStmt(instr, liveSet, graph):
 	interfere(instr.thenAssign, instr.liveThen, graph)
@@ -72,6 +76,7 @@ def interfere(asm, liveness, graph):
 			Leave:   interferePass,
 			Ret:     interferePass,
 			Newline: interferePass,
+			Label:   interferePass,
 			IfStmt:  interfereIfStmt
 		}[instr.__class__](instr, liveness[index], graph)
 	return graph

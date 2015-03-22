@@ -32,7 +32,7 @@ def explicateAdd(ast, gen):
 			IfExp(InjectFrom("bool",And([Or([IsType("bool",name1), IsType("int",name1)]),Or([IsType("bool",name2), IsType("int",name2)])])),
 				InjectFrom("int",Add((ProjectTo("boolint",name1),ProjectTo("boolint",name2)))),
 				IfExp(InjectFrom("bool",And([IsType("big",name1), IsType("big",name2)])),
-					InjectFrom("big",CallFunc(Name("add"),[ProjectTo("big", name1),ProjectTo("big", name2)])),
+					InjectFrom("big",CallRuntime(Name("add"),[ProjectTo("big", name1),ProjectTo("big", name2)])),
 					ThrowError(Const("addError"))
 				)
 			)
@@ -43,14 +43,17 @@ def explicateDiscard(ast, gen):
 	return Discard(explicate(ast.expr,gen))
 
 def explicateAssign(ast, gen):
-	print ast
+	#print ast
 	return Assign([ast.nodes[0]], explicate(ast.expr, gen))
 
 def explicateName(ast, gen):
 	return ast
 
 def explicateCallFunc(ast, gen):
-	return CallFunc(ast.node, [explicate(arg, gen) for arg in ast.args])
+	return CallFunc(explicate(ast.node, gen), [explicate(arg, gen) for arg in ast.args])
+	
+def explicateCallRuntime(ast, gen):
+	return CallRuntime(ast.node, [explicate(arg, gen) for arg in ast.args])
 
 def explicateCompare(ast, gen):
 	op, expr = ast.ops[0]
@@ -65,7 +68,7 @@ def explicateCompare(ast, gen):
 		return Let(name1, lhs, Let(name2, rhs, 
 			IfExp(
 				InjectFrom("bool",And([IsType("big", name1), IsType("big", name2)])),
-				InjectFrom("bool", CallFunc(funcname, [ProjectTo("big",name1), ProjectTo("big",name2)])),
+				InjectFrom("bool", CallRuntime(funcname, [ProjectTo("big",name1), ProjectTo("big",name2)])),
 				IfExp(
 					InjectFrom("bool",Or([IsType("big", name1), IsType("big", name2)])),
 					Name("False") if op == "==" else Name("True"),
@@ -79,7 +82,7 @@ def explicateOr(ast, gen):
 	name = Name(gen.inc().name())
 	return Let(name,
 		explicate(ast.nodes[0], gen),
-		IfExp(InjectFrom("bool",CallFunc(Name("is_true"), [name])),
+		IfExp(InjectFrom("bool",CallRuntime(Name("is_true"), [name])),
 			name,
 			explicate(ast.nodes[1], gen)
 		)
@@ -90,7 +93,7 @@ def explicateAnd(ast, gen):
 	name = Name(gen.inc().name())
 	return Let(name,
 		explicate(ast.nodes[0], gen),
-		IfExp(InjectFrom("bool",CallFunc(Name("is_true"), [name])),
+		IfExp(InjectFrom("bool",CallRuntime(Name("is_true"), [name])),
 			explicate(ast.nodes[1], gen),
 			name
 		)
@@ -119,7 +122,7 @@ def explicateIfExp(ast, gen):
 	elif isinstance(test,Dict):
 		return then_node if test.items else else_node
 	
-	return IfExp(InjectFrom("bool", CallFunc(Name("is_true"),[test])),then_node, else_node)
+	return IfExp(InjectFrom("bool", CallRuntime(Name("is_true"),[test])),then_node, else_node)
 
 def explicateIf(ast, gen):
 	raise NotImplementedError
@@ -133,25 +136,26 @@ def explicateReturn(ast, gen):
 
 def explicate(ast, gen):
 	return {
-		Module:   explicateModule,
-		Stmt:     explicateStmt,
-		Printnl:  explicatePrintnl,
-		Const:    explicateConst,
-		UnarySub: explicateUnarySub,
-		Add:      explicateAdd,
-		Discard:  explicateDiscard,
-		Assign:   explicateAssign,
-		Name:     explicateName,
-		CallFunc: explicateCallFunc,
-		Compare:  explicateCompare,
-		Or:       explicateOr,
-		And:      explicateAnd,
-		Not:      explicateNot,
-		List:     explicateList,
-		Dict:     explicateDict,
-		Subscript:explicateSubscript,
-		IfExp:    explicateIfExp,
-		If:       explicateIf,
-		Lambda:   explicateLambda,
-		Return:   explicateReturn
+		Module:      explicateModule,
+		Stmt:        explicateStmt,
+		Printnl:     explicatePrintnl,
+		Const:       explicateConst,
+		UnarySub:    explicateUnarySub,
+		Add:         explicateAdd,
+		Discard:     explicateDiscard,
+		Assign:      explicateAssign,
+		Name:        explicateName,
+		CallFunc:    explicateCallFunc,
+		CallRuntime: explicateCallRuntime,
+		Compare:     explicateCompare,
+		Or:          explicateOr,
+		And:         explicateAnd,
+		Not:         explicateNot,
+		List:        explicateList,
+		Dict:        explicateDict,
+		Subscript:   explicateSubscript,
+		IfExp:       explicateIfExp,
+		If:          explicateIf,
+		Lambda:      explicateLambda,
+		Return:      explicateReturn
 	}[ast.__class__](ast, gen)

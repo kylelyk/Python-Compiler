@@ -42,6 +42,9 @@ def uniquifyAssign(ast, gen, names):
 	return Assign([uniquify(ast.nodes[0], gen, names)], uniquify(ast.expr, gen, names))
 
 def uniquifyName(ast, gen, names):
+	#TODO remove this hack
+	if ast.name == "input" or ast.name == "True" or ast.name == "False":
+		return ast
 	return Name(names[ast.name])
 
 def uniquifyAssName(ast, gen, names):
@@ -113,7 +116,7 @@ def uniquifyReturn(ast, gen, names):
 #names is a dictionary which keeps track of all variables seen
 #so far and what they should be renamed to
 def uniquify(ast, gen, names):
-	 #astpp.printAst(ast)
+	#astpp.printAst(ast)
 	return {
 		Module:    uniquifyModule,
 		Stmt:      uniquifyStmt,

@@ -40,7 +40,7 @@ def glCallFunc(ast, scope):
 	return reduce(lambda acc, n : acc + getLambdas(n, scope), ast.args, [])
 
 def glCompare(ast, scope):
-	return getLambdas(ast.expr, scope) + getLambdas(ast.op[0][1], scope)
+	return getLambdas(ast.expr, scope) + getLambdas(ast.ops[0][1], scope)
 
 def glOr(ast, scope):
 	return getLambdas(ast.nodes[0], scope) + getLambdas(ast.nodes[1], scope)
@@ -148,7 +148,7 @@ def heapifyDiscard(ast, names):
 	return Discard(heapify(ast.expr, names))
 
 def heapifyAssign(ast, names):
-	print "heapify:",ast
+	#print "heapify:",ast
 	lhs = ast.nodes[0]
 	if isinstance(lhs, AssName):
 		if lhs.name in names:
@@ -160,7 +160,7 @@ def heapifyAssign(ast, names):
 		
 
 def heapifyName(ast, names):
-	print "heapifyName:",ast.name
+	#print "heapifyName:",ast.name
 	if ast.name in names:
 		return Subscript(ast, "OP_APPLY" ,[Const(0)])
 	else:
@@ -171,6 +171,9 @@ def heapifyAssName(ast, names):
 
 def heapifyCallFunc(ast, names):
 	return CallFunc(heapify(ast.node, names), [heapify(arg, names) for arg in ast.args])
+
+def heapifyCallRuntime(ast, names):
+	return CallRuntime(ast.node, [heapify(arg, names) for arg in ast.args])
 
 def heapifyCompare(ast, names):
 	return Compare(heapify(ast.expr, names), [(ast.ops[0][0], heapify(ast.ops[0][1], names))])
@@ -216,7 +219,7 @@ def heapifyLambda(ast, names):
 	return ModLambda(pPrime, paramAllocs, paramInits, localInits, funcCode)
 
 def heapifyReturn(ast, names):
-	print ast
+	#print ast
 	return Return(heapify(ast.value, names))
 
 def heapifyGetTag(ast, names):
@@ -240,33 +243,34 @@ def heapifyThrowError(ast, names):
 
 def heapify(ast, names):
 	return {
-		Module:    heapifyModule,
-		Stmt:      heapifyStmt,
-		Printnl:   heapifyPrintnl,
-		Const:     heapifyConst,
-		UnarySub:  heapifyUnarySub,
-		Add:       heapifyAdd,
-		Discard:   heapifyDiscard,
-		Assign:    heapifyAssign,
-		Name:      heapifyName,
-		AssName:   heapifyAssName,
-		CallFunc:  heapifyCallFunc,
-		Compare:   heapifyCompare,
-		Or:        heapifyOr,
-		And:       heapifyAnd,
-		Not:       heapifyNot,
-		List:      heapifyList,
-		Dict:      heapifyDict,
-		Subscript: heapifySubscript,
-		IfExp:     heapifyIfExp,
-		Lambda:    heapifyLambda,
-		Return:    heapifyReturn,
-		GetTag:     heapifyGetTag,
-		InjectFrom: heapifyInjectFrom,
-		ProjectTo:  heapifyProjectTo,
-		Let:        heapifyLet,
-		IsType:     heapifyIsType,
-		ThrowError: heapifyThrowError
+		Module:       heapifyModule,
+		Stmt:         heapifyStmt,
+		Printnl:      heapifyPrintnl,
+		Const:        heapifyConst,
+		UnarySub:     heapifyUnarySub,
+		Add:          heapifyAdd,
+		Discard:      heapifyDiscard,
+		Assign:       heapifyAssign,
+		Name:         heapifyName,
+		AssName:      heapifyAssName,
+		CallFunc:     heapifyCallFunc,
+		CallRuntime:  heapifyCallRuntime,
+		Compare:      heapifyCompare,
+		Or:           heapifyOr,
+		And:          heapifyAnd,
+		Not:          heapifyNot,
+		List:         heapifyList,
+		Dict:         heapifyDict,
+		Subscript:    heapifySubscript,
+		IfExp:        heapifyIfExp,
+		Lambda:       heapifyLambda,
+		Return:       heapifyReturn,
+		GetTag:       heapifyGetTag,
+		InjectFrom:   heapifyInjectFrom,
+		ProjectTo:    heapifyProjectTo,
+		Let:          heapifyLet,
+		IsType:       heapifyIsType,
+		ThrowError:   heapifyThrowError
 	}[ast.__class__](ast, names)
 
 #find all lambda's, and recurse repeatedly on them
@@ -278,20 +282,21 @@ def runHeapify(ast):
 	#A set of variable names that need to be heapified
 	heapVars = set()
 	
-	print "getLambdas:"
+	#print "getLambdas:"
 	lambdas = getLambdas(ast.node, 0)
 	for n, s in lambdas:
 		s = str(s)
-		print "Processing lambda"
-		astpp.printAst(n.code)
+		#print "Processing lambda"
+		#astpp.printAst(n.code)
 		read, write = varAnalysis.getVars(n.code)
+		#print read | write
 		for var in read | write:
-			print var
+			#print var
 			if var[var.rfind("_")+1:] != s:
-				print var,"was referenced in scope",s
+				#print var,"was referenced in scope",s
 				heapVars.add(var)
-	print ""
-	print heapVars
+	#print ""
+	#print heapVars
 	
 	#Now that we have a set of vars that need to be heapified, recurse through the tree
 	
