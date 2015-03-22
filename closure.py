@@ -67,7 +67,7 @@ def closureAssName(ast, gen, lambdaGen):
 
 def closureCallFunc(ast, gen, lambdaGen):
 	#Make input() a call to runtime
-	if ast.node.name == "input":
+	if isinstance(ast.node, Name) and ast.node.name == "input":
 		ast.node.name = "input_int"
 		#print "convert input into runtime call"
 		return closureCallRuntime(ast, gen, lambdaGen)
