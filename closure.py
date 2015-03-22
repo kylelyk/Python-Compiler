@@ -97,7 +97,7 @@ def closureAnd(ast, gen, lambdaGen):
 	return And([ast_left,ast_right]), l_left + l_right
 
 def closureNot(ast, gen, lambdaGen):
-	ast, l = closure(ast.expr, gen, gen, lambdaGen)
+	ast, l = closure(ast.expr, gen, lambdaGen)
 	return Not(ast), l
 
 def closureList(ast, gen, lambdaGen):
