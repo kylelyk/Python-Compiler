@@ -152,7 +152,7 @@ def heapifyAssign(ast, names):
 	lhs = ast.nodes[0]
 	if isinstance(lhs, AssName):
 		if lhs.name in names:
-			return Assign([Subscript(lhs, "OP_ASSIGN", [Const(0)])], heapify(ast.expr, names))
+			return Assign([Subscript(Name(lhs.name), "OP_ASSIGN", [Const(0)])], heapify(ast.expr, names))
 		else:
 			return Assign([lhs], heapify(ast.expr, names))
 	else:
@@ -162,6 +162,8 @@ def heapifyAssign(ast, names):
 def heapifyName(ast, names):
 	#print "heapifyName:",ast.name
 	if ast.name in names:
+		if isinstance(ast, AssName):
+			raise TypeError
 		return Subscript(ast, "OP_APPLY" ,[Const(0)])
 	else:
 		return ast
@@ -205,6 +207,7 @@ def heapifyIfExp(ast, names):
 
 #Creates new modified lambda instances
 def heapifyLambda(ast, names):
+	print ast.code.__class__
 	if not isinstance(ast.code, Stmt):
 		ast.code = Stmt([Return(ast.code)])
 	heapParams = [p in names for p in ast.argnames]
@@ -213,10 +216,13 @@ def heapifyLambda(ast, names):
 	l_h = l & names
 	p_h = [p for p in ast.argnames if p in names]
 	paramAllocs = [Assign([AssName(p, 'OP_ASSIGN')], List([Const(0)])) for p in p_h]
-	paramInits = [Assign([Subscript(Name(p), 'OP_ASSIGN', Const(0))], pPrime[i]) for i, p in enumerate(p_h)]
+	paramInits = [Assign([Subscript(Name(p), 'OP_ASSIGN', [Const(0)])], Name(pPrime[i])) for i, p in enumerate(p_h)]
 	localInits = [Assign([AssName(p, 'OP_ASSIGN')], List([Const(0)])) for p in l_h]
 	funcCode = heapify(ast.code, names)
-	return ModLambda(pPrime, paramAllocs, paramInits, localInits, funcCode)
+	
+	#Combine the code together
+	funcCode.nodes = paramAllocs + paramInits + localInits + funcCode.nodes
+	return Lambda(pPrime, ast.defaults, ast.flags,funcCode)
 
 def heapifyReturn(ast, names):
 	#print ast

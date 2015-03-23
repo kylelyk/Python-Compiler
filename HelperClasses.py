@@ -1,23 +1,5 @@
 from compiler.ast import *
 
-class ModLambda(Node):
-	def __init__(self, params, paramAllocs, paramInits, localInits, body):
-		self.params = params
-		self.paramAllocs = paramAllocs
-		self.paramInits = paramInits
-		self.localInits = localInits
-		self.body = body
-	def getChildren(self):
-		return (self.params, self.paramAllocs, self.paramInits, self.localInits, self.body)
-	def __str__(self):
-		ret = "lambda "+str(self.params)+" : \n"
-		ret += "\t" + str(self.paramAllocs) + "\n"
-		ret += "\t" + str(self.paramInits) + "\n"
-		ret += "\t" + str(self.localInits) + "\n"
-		for instr in self.body:
-			ret += "\t" + str(instr) + "\n"
-		return ret
-
 #Flattened version of IfExp
 #Is reused for both python ast and asm instructions
 class IfStmt(Node):

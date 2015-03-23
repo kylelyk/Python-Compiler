@@ -57,6 +57,9 @@ def flatAssign(ast, newast, gen, map):
 	rhs = flatten(ast.expr, newast, gen, map)
 	lhs = flatten(ast.nodes[0], newast, gen, map)
 	if isinstance(lhs, Subscript):
+		if not isinstance(lhs.expr, Name):
+			print ast
+			raise TypeError
 		return flatten(CallRuntime(Name("set_subscript"),[lhs.expr, lhs.subs[0], rhs]), newast, gen, map)
 	else:
 		return addAssign(rhs, newast, gen, map, lhs)
@@ -171,16 +174,12 @@ def flatIfExp(ast, newast, gen, map):
 	))
 	return retVar
 
-def flatLambda(ast, newast, gen, map):
-	#Shouldn't reach here
-	raise NotImplementedError 
-
 #Have to break the contract here
-def flatModLambda(ast, newast, gen, map):
+def flatLambda(ast, newast, gen, map):
 	#Keep the flattens inside the body; we don't want to add flattened statements outside of the function
 	flat_body = Stmt([])
-	flatten(ast.body, flat_body, gen, map)
-	return ModLambda(ast.params, ast.paramAllocs, ast.paramInits, ast.localInits, flat_body)
+	flatten(ast.code, flat_body, gen, map)
+	return Lambda(ast.argnames, ast.defaults, ast.flags, flat_body)
 
 #Have to break the contract here
 def flatReturn(ast, newast, gen, map):
@@ -218,7 +217,7 @@ def flatThrowError(ast, newast, gen, map):
 	return addAssign(CallRuntime(Name("error_pyobj"),[simple]), newast, gen, map)
 
 def flatten(ast, newast, gen, map):
-	#print ast
+	print ast
 	return {
 		Stmt:        flatStmt,
 		Printnl:     flatPrintnl,
@@ -241,7 +240,6 @@ def flatten(ast, newast, gen, map):
 		Subscript:   flatSubscript,
 		IfExp:       flatIfExp,
 		Lambda:      flatLambda,
-		ModLambda:   flatModLambda,
 		Return:      flatReturn,
 		GetTag:      flatGetTag,
 		InjectFrom:  flatInjectFrom,

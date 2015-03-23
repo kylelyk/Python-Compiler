@@ -9,7 +9,7 @@ def standardize(ast, l):
 	#TODO check if correct
 	#print ast.nodes
 	ast.nodes.append(Return(Const(0)))
-	return l + [("main", ModLambda([], [], [], [], ast))]
+	return l + [("main", Lambda([], [], 0, ast))]
 	
 	
 	#print "addNewVars:",ast
@@ -124,15 +124,17 @@ def closureIfExp(ast, gen, lambdaGen):
 	
 	return IfExp(ast_test, ast_then, ast_else_), l_test+l_then+l_else_
 
-def closureModLambda(ast, gen, lambdaGen):
+def closureLambda(ast, gen, lambdaGen):
 	#First recurse into the body
-	new_body, l_body = closure(ast.body, gen, lambdaGen)
+	astpp.printAst( ast)
+	new_body, l_body = closure(ast.code, gen, lambdaGen)
 	
 	lambdaName = lambdaGen.inc().name()
 	
-	written_to, read_from = varAnalysis.getVars(ast.body)
-	free_vars = list((read_from - written_to) - set(ast.params))
-	free_vars_param = 'free_vars_' + lambdaName
+	
+	written_to, read_from = varAnalysis.getVars(new_body)
+	free_vars = list((read_from - written_to) - set(ast.argnames))
+	free_vars_param = '$free_vars_' + lambdaName
 	
 	#Add the free_var assignments to the start of the body
 	#i.e x = free_vars_X[0]; y = free_vars_X[1]
@@ -141,8 +143,8 @@ def closureModLambda(ast, gen, lambdaGen):
 		new_body.nodes = [n_assign] + new_body.nodes
 	
 	#Create the function definition for the top level scope
-	newParams = [Name(free_vars_param)] + ast.params
-	funcDef = ModLambda(newParams, ast.paramAllocs, ast.paramInits, ast.localInits, new_body)
+	newParams = [Name(free_vars_param)] + ast.argnames
+	funcDef = Lambda(newParams, ast.defaults, ast.flags, new_body)
 	
 	#Create the local, closure convention'd reference to the function
 	closedLambda = CallRuntime(Name('create_closure'),[Const(lambdaName)] + [Name(fvar) for fvar in free_vars])
@@ -181,7 +183,7 @@ def closureThrowError(ast, gen, lambdaGen):
 #The function list is given as a tuple of (FuncName, Lambda)
 #Where FuncName is the name that the Lambda is assigned to
 def closure(ast, gen, lambdaGen):
-	 #astpp.printAst(ast)
+	astpp.printAst(ast)
 	return {
 		Module:      closureModule,
 		Stmt:        closureStmt,
@@ -203,7 +205,7 @@ def closure(ast, gen, lambdaGen):
 		Dict:        closureDict,
 		Subscript:   closureSubscript,
 		IfExp:       closureIfExp,
-		ModLambda:   closureModLambda,
+		Lambda:   closureLambda,
 		Return:      closureReturn,
 		GetTag:      closureGetTag,
 		InjectFrom:  closureInjectFrom,

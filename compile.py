@@ -3,7 +3,7 @@ from compiler.ast import *
 from x86AST import *
 import closure, uniquify, heapify, explicate, flattener, liveness, interference, colorGraph
 
-debug = False
+debug = True
 def printd(str):
 	if debug:
 		print str
@@ -98,6 +98,7 @@ def locOneArg(instr, color):
 			instr.reg = colorGraph.reg_map[loc]
 
 def locTwoArgs(instr, color):
+	print instr
 	if instr.reg1 and instr.reg1 != "%esp" and instr.reg1 != "%ebp":
 		if instr.reg1 in color:
 			loc = color[instr.reg1]
@@ -155,23 +156,24 @@ debugMsg2:
 .asciz "Debug Message 2.\\n"
 .text\n'''
 
-def mainLoop(asm, spilled, gen):
+def mainLoop(asm, gen):
 	newasm = []
-	for n, a, alloc, colors in asm:
+	spilled = False
+	for n, a, colors, allocs, prevSpillList in asm:
 		l = liveness.liveness(a)
-		#print l
 		#printd("liveness:\n"+str(l))
 		g = interference.interfere(a, l, {})
 		#add spilled flag to vars in new graph
 		#printd("interfernce:\n"+str(g))
-		assignSpilled(g, spilled)
+		assignSpilled(g, prevSpillList)
 		#printd("interfernce:\n"+str(g))
 		colors = colorGraph.color_graph(g)
 		#printd("colors:\n"+str(colors))
-		a, s = spillCode(a, g, colors, gen)
-		spilled = spilled + s
-		newasm.append((n, a, alloc, colors))
-	return newasm, g, spilled, colors, bool(s)
+		a, spillList = spillCode(a, g, colors, gen)
+		spilled |= spillList != []
+		prevSpillList = prevSpillList + spillList
+		newasm.append((n, a, colors, allocs, prevSpillList))
+	return newasm, spilled
 
 def compile(ast):
 	gen = GenSym("__$tmp")
@@ -179,12 +181,12 @@ def compile(ast):
 	state = ()
 	
 	#print "\n\n",ast,"\n" #astpp.printAst(ast)
-	uniquify.uniquify(ast, GenSym("_"), {})
+	uniquify.uniquify(ast, GenSym("$"), {})
 	
 	explicate.explicate(ast, gen)
 	#print "\n\nAfter explicate:",ast,"\n" #astpp.printAst(ast)
 	heapify.runHeapify(ast)
-	ast = closure.closure(ast, gen, GenSym("lambda"))
+	ast = closure.closure(ast, gen, GenSym("$lambda"))
 	#print "before:"
 	#for n, a in ast:
 	#	print "\n\n",n,"= ",astpp.printAst(a)
@@ -192,8 +194,8 @@ def compile(ast):
 	#astpp.printAst(ast)
 	newast = flattener.runFlatten(ast, gen, map)
 	#print "after:"
-	#for n, a in newast:
-	#	print "\n\n",n,"= ",astpp.printAst(a)
+	for n, a in newast:
+		print "\n\n",n,"= ",astpp.printAst(a)
 	#print "flattened ast:"
 	#astpp.printAst(newast)
 	asm = []
@@ -204,25 +206,26 @@ def compile(ast):
 	#TODO clean this up
 	newasm = []
 	for n, a, alloc in asm:
-		newasm.append((n, a, alloc, {}))
+		newasm.append((n, a, alloc, {}, []))
 		for instr in a:
 			printd(instr)
 	asm = newasm
 	
 	maxiter = 10
 	iter = 1
-	asm, g, spilled, colors, cont = mainLoop(asm, [], gen)
+	asm, cont = mainLoop(asm, gen)
 	while cont and iter != maxiter:
 		iter += 1
 		#print ("Iteration: "+str(iter))
-		asm, g, spilled, colors, cont = mainLoop(asm, spilled, gen)
+		asm, cont = mainLoop(asm, gen)
 	
 	if iter == maxiter:
 		print maxiter,"iterations was not enough to assign spilt variables"
 		sys.exit(1)
 	
 	newasm = []
-	for n, a, alloc, colors in asm:
+	for n, a, colors, alloc, spill in asm:
+		print colors
 		a = removeIf(a, GenSym(""))
 		assignLocations(a, colors)
 		space = max(0, max(colors.values())-9)*4

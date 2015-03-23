@@ -212,7 +212,7 @@ static char is_in_list(list ls, pyobj b)
     int i;
     for(i = 0; i < ls.len; i++)
       if (ls.data[i] == b)
-	return 1;
+    return 1;
     return 0;
 }
 
@@ -244,7 +244,7 @@ static void print_dict(pyobj dict)
         inside = 1;
         inside_reset = 1;
         printing_list.len = 0;
-	printing_list.data = 0;
+    printing_list.data = 0;
     }
     d = project_big(dict);
 
@@ -264,18 +264,18 @@ static void print_dict(pyobj dict)
             print_pyobj(k);
             printf(": ");
             if (is_in_list(printing_list, v)
-		|| equal_pyobj(v,dict)) {
-	      printf("{...}");
+        || equal_pyobj(v,dict)) {
+          printf("{...}");
             }
             else {
                 /* tally this dictionary in our list of printing dicts */
-	      list a;
-	      a.len = 1;
-	      a.data = (pyobj*)malloc(sizeof(pyobj) * a.len);
-	      a.data[0] = dict;
-	      /* Yuk, concatenating (adding) lists is slow! */
-	      printing_list = list_add(printing_list, a);
-	      print_pyobj(v);
+          list a;
+          a.len = 1;
+          a.data = (pyobj*)malloc(sizeof(pyobj) * a.len);
+          a.data[0] = dict;
+          /* Yuk, concatenating (adding) lists is slow! */
+          printing_list = list_add(printing_list, a);
+          print_pyobj(v);
             }
             if(i != max - 1)
                 printf(", ");
@@ -287,7 +287,7 @@ static void print_dict(pyobj dict)
     if(inside_reset) {
         inside = 0;
         printing_list.len = 0;
-	printing_list.data = 0;
+    printing_list.data = 0;
     }
 }
 
@@ -322,17 +322,17 @@ static unsigned int hash_any(void* o)
       int i;
       unsigned long h = 0; 
       for (i = 0; i != b->u.l.len; ++i)
-	h = 5*h + hash_any(&b->u.l.data[i]);
+    h = 5*h + hash_any(&b->u.l.data[i]);
       return h;
     }
     case DICT: {
       struct hashtable_itr* i;
       unsigned long h = 0; 
       if (hashtable_count(b->u.d) == 0)
-	return h;
+    return h;
       i = hashtable_iterator(b->u.d); 
       do {
-	h = 5*h + hash_any(hashtable_iterator_value(i));
+    h = 5*h + hash_any(hashtable_iterator_value(i));
       } while (hashtable_iterator_advance(i));
       return h;
     }
@@ -598,7 +598,7 @@ static void print_list(pyobj ls)
   int i;
   for(i = 0; i < l.len; i++) {
     if (tag(l.data[i]) == BIG_TAG && project_big((l.data[i]))->tag == LIST
-	&& project_big((l.data[i]))->u.l.data == l.data)
+    && project_big((l.data[i]))->u.l.data == l.data)
       printf("[...]");
     else
       print_pyobj(l.data[i]);
@@ -825,9 +825,9 @@ big_pyobj* create_class(pyobj bases)
       ret->u.cl.nparents = basesp->u.l.len;
       ret->u.cl.parents = (class*)malloc(sizeof(class) * ret->u.cl.nparents);
       for (i = 0; i != ret->u.cl.nparents; ++i) {
-	  pyobj* parent = &basesp->u.l.data[i];
-	  if (tag(*parent) == BIG_TAG && project_big(*parent)->tag == CLASS)
-	      ret->u.cl.parents[i] = project_big(*parent)->u.cl;
+      pyobj* parent = &basesp->u.l.data[i];
+      if (tag(*parent) == BIG_TAG && project_big(*parent)->tag == CLASS)
+          ret->u.cl.parents[i] = project_big(*parent)->u.cl;
           else
               exit(-1);
       }

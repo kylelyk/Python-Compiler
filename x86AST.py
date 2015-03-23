@@ -302,7 +302,7 @@ def toAsmIfStmt(ast, assign, asm, map):
 	asm.append(Newline())
 	return l
 
-def toAsmModLambda(ast, assign, asm, map):
+def toAsmLambda(ast, assign, asm, map):
 	asm.append(Pushl(reg="%ebp"))
 	asm.append(Movl(reg1="%esp", reg2="%ebp"))
 	asm.append(Pushl(reg="%ebx"))
@@ -313,7 +313,7 @@ def toAsmModLambda(ast, assign, asm, map):
 	asm.append(Movl(const1=0b001, reg2="False"))
 	asm.append(Movl(const1=0b101, reg2="True"))
 	asm.append(Newline())
-	return [allocStmt] + toAsm(ast.body, assign, asm, map)
+	return [allocStmt] + toAsm(ast.code, assign, asm, map)
 
 def toAsmReturn(ast, assign, asm, map):
 	addInstr2(ast.value, Name("%eax"), Movl, asm, lambda a, b : a + " -> " + b)
@@ -349,7 +349,7 @@ def toAsm(ast, assign, asm, map):
 		Dict:        toAsmDict,
 		Subscript:   toAsmSubscript,
 		IfStmt:      toAsmIfStmt,
-		ModLambda:   toAsmModLambda,
+		Lambda:      toAsmLambda,
 		Return:      toAsmReturn
 	}[ast.__class__](ast, assign, asm, map)
 
