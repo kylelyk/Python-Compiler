@@ -93,8 +93,6 @@ def uniquifyLambda(ast, gen, names):
 	#Modify lambda's so that they can hold multiple stmts and a final return
 	if not isinstance(ast.code, Stmt):
 		ast.code = Stmt([Return(ast.code)])
-	#print "In function"
-	#print "names before:",names
 	#rename args
 	gen.inc()
 	newDict = names.copy()
@@ -104,19 +102,15 @@ def uniquifyLambda(ast, gen, names):
 	addNewVars(ast.code, gen, newDict)
 	#recurse with new dictionary
 	funcCode = uniquify(ast.code, gen, newDict)
-	#print "newDict:",newDict
-	#print "names after:",names
 	gen.dec()
 	return Lambda(funcArgs, ast.defaults, ast.flags, funcCode)
 
 def uniquifyReturn(ast, gen, names):
-	#print ast
 	return Return(uniquify(ast.value, gen, names))
 
 #names is a dictionary which keeps track of all variables seen
 #so far and what they should be renamed to
 def uniquify(ast, gen, names):
-	#astpp.printAst(ast)
 	return {
 		Module:    uniquifyModule,
 		Stmt:      uniquifyStmt,

@@ -305,11 +305,11 @@ def toAsmIfStmt(ast, assign, asm, map):
 def toAsmLambda(ast, assign, asm, map):
 	asm.append(Pushl(reg="%ebp"))
 	asm.append(Movl(reg1="%esp", reg2="%ebp"))
+	allocStmt = Subl(const1=0, reg2="%esp")
+	asm.append(allocStmt)
 	asm.append(Pushl(reg="%ebx"))
 	asm.append(Pushl(reg="%edi"))
 	asm.append(Pushl(reg="%esi"))
-	allocStmt = Subl(const1=0, reg2="%esp")
-	asm.append(allocStmt)
 	asm.append(Movl(const1=0b001, reg2="False"))
 	asm.append(Movl(const1=0b101, reg2="True"))
 	for i, arg in enumerate(ast.argnames):
@@ -320,11 +320,11 @@ def toAsmLambda(ast, assign, asm, map):
 def toAsmReturn(ast, assign, asm, map):
 	addInstr2(ast.value, Name("%eax"), Movl, asm, lambda a, b : a + " -> " + b)
 	asm.append(Newline())
-	allocStmt = Addl(const1=0, reg2="%esp")
-	asm.append(allocStmt)
 	asm.append(Popl(reg="%esi"))
 	asm.append(Popl(reg="%edi"))
 	asm.append(Popl(reg="%ebx"))
+	allocStmt = Addl(const1=0, reg2="%esp")
+	asm.append(allocStmt)
 	asm.append(Leave())
 	asm.append(Ret())
 	return [allocStmt]

@@ -208,7 +208,7 @@ def compile(ast):
 	printd("psuedo asm:")
 	newasm = []
 	for n, a, alloc in asm:
-		newasm.append((n, a, alloc, {}, []))
+		newasm.append((n, a, {}, alloc, []))
 		for instr in a:
 			printd(instr)
 	

@@ -207,7 +207,7 @@ def heapifyLambda(ast, names):
 	heapParams = [p in names for p in ast.argnames]
 	pPrime = [p+"_heap" if heapParams[i] else p for i, p in enumerate(ast.argnames)]
 	w, r = varAnalysis.getVars(ast.code)
-	l_h = (r - w) & names
+	l_h = w & names
 	p_h = [p for p in ast.argnames]
 	paramAllocs = [Assign([AssName(p, 'OP_ASSIGN')], List([Const(1)])) for p in p_h if p in names]
 	paramInits = [Assign([Subscript(Name(p), 'OP_ASSIGN', [Const(0)])], Name(pPrime[i])) for i, p in enumerate(p_h) if p in names]
@@ -295,8 +295,5 @@ def runHeapify(ast):
 	#Now initalize all heapVars at the start of the program
 	#i.e prepend h_1 = [0], h_2 = [0] etc. to our outermost stmt node
 	for var_name in heapVars:
-		stmt_array = ast.node.nodes
-		new_ass_node = Assign([AssName(var_name, 'OP_ASSIGN')], List([Const(0)]))
-		ast.node.nodes = [new_ass_node] + ast.node.nodes
-	
+		ast.node.nodes = [Assign([AssName(var_name, 'OP_ASSIGN')], List([Const(0)]))] + ast.node.nodes
 	return ast

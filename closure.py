@@ -117,10 +117,9 @@ def closureLambda(ast, gen, lambdaGen):
 	new_body, l_body = closure(ast.code, gen, lambdaGen)
 	lambdaName = lambdaGen.inc().name()
 	
-	written_to, read_from = varAnalysis.getVars(new_body)
-	free_vars = list((read_from - written_to) - set(ast.argnames))
+	write, read = varAnalysis.getVars(new_body)
+	free_vars = list((read - write) - set(ast.argnames))
 	free_vars_param = '$free_vars_' + lambdaName
-	
 	#Add the free_var assignments to the start of the body
 	#i.e x = free_vars_X[0]; y = free_vars_X[1]
 	for i, var in enumerate(free_vars):
@@ -135,7 +134,6 @@ def closureLambda(ast, gen, lambdaGen):
 	return closedLambda, l_body + [(lambdaName, funcDef)]
 
 def closureReturn(ast, gen, lambdaGen):
-	#print ast
 	ast, l = closure(ast.value, gen, lambdaGen)
 	return Return(ast), l
 

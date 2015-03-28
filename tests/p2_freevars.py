@@ -5,3 +5,5 @@ def f():
 	x = 23
 	return x + y
 print f()
+y = 5
+print f()
