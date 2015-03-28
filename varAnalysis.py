@@ -49,7 +49,7 @@ def varsCallFunc(ast):
 	return combine(getVars(ast.node), reduce(lambda acc, arg: combine(acc, getVars(arg)), ast.args, (set(),set())))
 
 def varsCallRuntime(ast):
-	return combine(getVars(ast.node), reduce(lambda acc, arg: combine(acc, getVars(arg)), ast.args, (set(),set())))
+	return reduce(lambda acc, arg: combine(acc, getVars(arg)), ast.args, (set(),set()))
 
 def varsCompare(ast):
 	return combine(getVars(ast.ops[0][1]), getVars(ast.expr))

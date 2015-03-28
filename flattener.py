@@ -19,7 +19,6 @@ def addAssign(node, newast, gen, map, name = None):
 def flatStmt(ast, newast, gen, map):
 	for node in ast.nodes:
 		flatten(node, newast, gen, map)
-	#print "flatStmt:",newast
 
 def flatPrintnl(ast, newast, gen, map):
 	simple = flatten(ast.nodes[0], newast, gen, map)
@@ -57,9 +56,6 @@ def flatAssign(ast, newast, gen, map):
 	rhs = flatten(ast.expr, newast, gen, map)
 	lhs = flatten(ast.nodes[0], newast, gen, map)
 	if isinstance(lhs, Subscript):
-		if not isinstance(lhs.expr, Name):
-			print ast
-			raise TypeError
 		return flatten(CallRuntime(Name("set_subscript"),[lhs.expr, lhs.subs[0], rhs]), newast, gen, map)
 	else:
 		return addAssign(rhs, newast, gen, map, lhs)
@@ -183,8 +179,6 @@ def flatLambda(ast, newast, gen, map):
 
 #Have to break the contract here
 def flatReturn(ast, newast, gen, map):
-	#print "flatReturn"
-	#raise NotImplementedError
 	name = flatten(ast.value, newast, gen, map)
 	newast.nodes.append(Return(name))
 	return name
@@ -217,7 +211,6 @@ def flatThrowError(ast, newast, gen, map):
 	return addAssign(CallRuntime(Name("error_pyobj"),[simple]), newast, gen, map)
 
 def flatten(ast, newast, gen, map):
-	print ast
 	return {
 		Stmt:        flatStmt,
 		Printnl:     flatPrintnl,
@@ -253,8 +246,6 @@ def flatten(ast, newast, gen, map):
 def runFlatten(ast, gen, map):
 	l = []
 	for n, a in ast:
-		#print a.__class__
 		newast = flatten(a, None, gen, map)
-		#print "newast:",newast
 		l.append((n, newast))
 	return l

@@ -43,7 +43,6 @@ def explicateDiscard(ast, gen):
 	return Discard(explicate(ast.expr,gen))
 
 def explicateAssign(ast, gen):
-	#print ast
 	return Assign([ast.nodes[0]], explicate(ast.expr, gen))
 
 def explicateName(ast, gen):

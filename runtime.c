@@ -726,6 +726,7 @@ pyobj get_subscript(pyobj c, pyobj key)
 void print_any(pyobj p) {
   print_pyobj(p);
   printf("\n");
+  //printf(" '%x'\n",p);
 }
 
 int is_true(pyobj v)

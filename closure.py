@@ -6,29 +6,17 @@ import varAnalysis, astpp
 #Combines the func list and ast into a list of tuples (funcname, ModLambda)
 #all code not in a lambda will be put into main
 def standardize(ast, l):
-	#TODO check if correct
-	#print ast.nodes
 	ast.nodes.append(Return(Const(0)))
 	return l + [("main", Lambda([], [], 0, ast))]
-	
-	
-	#print "addNewVars:",ast
-	#goes through the top level scope and add the variables to the dictionary
-	for (funcName, funcDef) in l:
-		#astpp.printAst(funcDef)
-		assign_f = Assign([AssName(funcName, 'OP_ASSIGN')], funcDef)
-		ast.nodes = [assign_f] + ast.nodes
-	return ast
 
+#Helper to recursive call closure on each elm
+#and to reduce the list of tuples into one large tuple
 def iterList(list, gen, lambdaGen):
 	listTup = [closure(n, gen, lambdaGen) for n in list]
 	return reduce(lambda (acc_a, acc_l), (a, l) : (acc_a + [a], acc_l + l), listTup, ([],[]))
 
 def closureModule(ast, gen, lambdaGen):
 	ast, l = closure(ast.node, gen, lambdaGen)
-	#print "\n\n",ast
-	#print "\n\n", l
-	#print standardize(ast, l)
 	return standardize(ast, l)
 
 def closureStmt(ast, gen, lambdaGen):
@@ -69,13 +57,13 @@ def closureCallFunc(ast, gen, lambdaGen):
 	#Make input() a call to runtime
 	if isinstance(ast.node, Name) and ast.node.name == "input":
 		ast.node.name = "input_int"
-		#print "convert input into runtime call"
 		return closureCallRuntime(ast, gen, lambdaGen)
 	cl = Name(gen.inc().name())
-	a, l = iterList(ast.args, gen, lambdaGen)
-	args = [CallRuntime(Name("get_free_vars"), [cl])] + l
-	return Let(cl, ast.node,
-		CallFunc(CallRuntime(Name("get_fun_ptr"), [cl]), args)), l
+	funcRef, l1 = closure(ast.node, gen, lambdaGen)
+	a, l2 = iterList(ast.args, gen, lambdaGen)
+	args = [CallRuntime(Name("get_free_vars"), [cl])] + a
+	return Let(cl, funcRef,
+		CallFunc(CallRuntime(Name("get_fun_ptr"), [cl]), args)), l1 + l2
 
 def closureCallRuntime(ast, gen, lambdaGen):
 	a, l = iterList(ast.args, gen, lambdaGen)
@@ -126,11 +114,8 @@ def closureIfExp(ast, gen, lambdaGen):
 
 def closureLambda(ast, gen, lambdaGen):
 	#First recurse into the body
-	astpp.printAst( ast)
 	new_body, l_body = closure(ast.code, gen, lambdaGen)
-	
 	lambdaName = lambdaGen.inc().name()
-	
 	
 	written_to, read_from = varAnalysis.getVars(new_body)
 	free_vars = list((read_from - written_to) - set(ast.argnames))
@@ -143,14 +128,12 @@ def closureLambda(ast, gen, lambdaGen):
 		new_body.nodes = [n_assign] + new_body.nodes
 	
 	#Create the function definition for the top level scope
-	newParams = [Name(free_vars_param)] + ast.argnames
+	newParams = [free_vars_param] + ast.argnames
 	funcDef = Lambda(newParams, ast.defaults, ast.flags, new_body)
-	
 	#Create the local, closure convention'd reference to the function
-	closedLambda = CallRuntime(Name('create_closure'),[Const(lambdaName)] + [Name(fvar) for fvar in free_vars])
+	closedLambda = InjectFrom("big", CallRuntime(Name('create_closure'),[Const(lambdaName), List([Name(fvar) for fvar in free_vars])]))
 	return closedLambda, l_body + [(lambdaName, funcDef)]
-	
-	
+
 def closureReturn(ast, gen, lambdaGen):
 	#print ast
 	ast, l = closure(ast.value, gen, lambdaGen)
@@ -183,7 +166,6 @@ def closureThrowError(ast, gen, lambdaGen):
 #The function list is given as a tuple of (FuncName, Lambda)
 #Where FuncName is the name that the Lambda is assigned to
 def closure(ast, gen, lambdaGen):
-	astpp.printAst(ast)
 	return {
 		Module:      closureModule,
 		Stmt:        closureStmt,
@@ -205,7 +187,7 @@ def closure(ast, gen, lambdaGen):
 		Dict:        closureDict,
 		Subscript:   closureSubscript,
 		IfExp:       closureIfExp,
-		Lambda:   closureLambda,
+		Lambda:      closureLambda,
 		Return:      closureReturn,
 		GetTag:      closureGetTag,
 		InjectFrom:  closureInjectFrom,

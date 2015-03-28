@@ -1,4 +1,4 @@
-import compiler
+import compiler, astpp
 from compiler.ast import *
 from HelperClasses import *
 
@@ -217,7 +217,6 @@ def toAsmName(ast, assign, asm, map):
 	return []
 
 def toAsmCallFunc(ast, assign, asm, map, star=True):
-	#print ast
 	comment = ast.node.name+"("
 	for arg in ast.args:
 		comment += str(arg.value)+", " if isinstance(arg, Const) else arg.name+", "
@@ -234,7 +233,6 @@ def toAsmCallFunc(ast, assign, asm, map, star=True):
 	return []
 
 def toAsmCallRuntime(ast, assign, asm, map):
-	#print "toAsmCallRuntime"
 	return toAsmCallFunc(ast, assign, asm, map, False)
 
 def toAsmCompare(ast, assign, asm, map):
@@ -296,6 +294,8 @@ def toAsmIfStmt(ast, assign, asm, map):
 	l = []
 	reduce(lambda acc, n : acc + toAsm(n, assign, new1, map), ast.thenAssign, l)
 	reduce(lambda acc, n : acc + toAsm(n, assign, new2, map), ast.elseAssign, l)
+	#use this line to debug the branching of if statements
+	#[Pushl(const="debugMsg1"),Call(reg="puts"),Addl(const1=4,reg2="%esp")] +
 	ast.thenAssign = new1
 	ast.elseAssign = new2
 	asm.append(ast)
@@ -312,6 +312,8 @@ def toAsmLambda(ast, assign, asm, map):
 	asm.append(allocStmt)
 	asm.append(Movl(const1=0b001, reg2="False"))
 	asm.append(Movl(const1=0b101, reg2="True"))
+	for i, arg in enumerate(ast.argnames):
+		asm.append(Movl(offset1=(i+2)*4, reg1="%ebp", reg2=arg, comment=arg))
 	asm.append(Newline())
 	return [allocStmt] + toAsm(ast.code, assign, asm, map)
 
@@ -357,11 +359,8 @@ def toAsm(ast, assign, asm, map):
 #where ref1 and ref2 are references to the move stack pointer instructions
 #that will need to be update once register allocation is done
 def pyToAsm(ast, asm, map):
-	#print "pyToAsm"
 	for n, a in ast:
-		#print a
 		funcAsm = []
 		funcAsm.append(Label(n))
 		allocs = toAsm(a, None, funcAsm, map)
-		
 		asm.append((n, funcAsm, allocs))

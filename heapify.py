@@ -26,7 +26,7 @@ def glDiscard(ast, scope):
 
 def glAssign(ast, scope):
 	return getLambdas(ast.expr, scope)
-		
+
 def glName(ast, scope):
 	return [] 
 
@@ -148,7 +148,6 @@ def heapifyDiscard(ast, names):
 	return Discard(heapify(ast.expr, names))
 
 def heapifyAssign(ast, names):
-	#print "heapify:",ast
 	lhs = ast.nodes[0]
 	if isinstance(lhs, AssName):
 		if lhs.name in names:
@@ -160,10 +159,7 @@ def heapifyAssign(ast, names):
 		
 
 def heapifyName(ast, names):
-	#print "heapifyName:",ast.name
 	if ast.name in names:
-		if isinstance(ast, AssName):
-			raise TypeError
 		return Subscript(ast, "OP_APPLY" ,[Const(0)])
 	else:
 		return ast
@@ -205,27 +201,24 @@ def heapifyIfExp(ast, names):
 		heapify(ast.else_, names)
 	)
 
-#Creates new modified lambda instances
 def heapifyLambda(ast, names):
-	print ast.code.__class__
 	if not isinstance(ast.code, Stmt):
 		ast.code = Stmt([Return(ast.code)])
 	heapParams = [p in names for p in ast.argnames]
 	pPrime = [p+"_heap" if heapParams[i] else p for i, p in enumerate(ast.argnames)]
-	l, _ = varAnalysis.getVars(ast.code)
-	l_h = l & names
-	p_h = [p for p in ast.argnames if p in names]
-	paramAllocs = [Assign([AssName(p, 'OP_ASSIGN')], List([Const(0)])) for p in p_h]
-	paramInits = [Assign([Subscript(Name(p), 'OP_ASSIGN', [Const(0)])], Name(pPrime[i])) for i, p in enumerate(p_h)]
-	localInits = [Assign([AssName(p, 'OP_ASSIGN')], List([Const(0)])) for p in l_h]
+	w, r = varAnalysis.getVars(ast.code)
+	l_h = (r - w) & names
+	p_h = [p for p in ast.argnames]
+	paramAllocs = [Assign([AssName(p, 'OP_ASSIGN')], List([Const(1)])) for p in p_h if p in names]
+	paramInits = [Assign([Subscript(Name(p), 'OP_ASSIGN', [Const(0)])], Name(pPrime[i])) for i, p in enumerate(p_h) if p in names]
+	localInits = [Assign([AssName(p, 'OP_ASSIGN')], List([Const(1)])) for p in l_h]
 	funcCode = heapify(ast.code, names)
 	
 	#Combine the code together
 	funcCode.nodes = paramAllocs + paramInits + localInits + funcCode.nodes
-	return Lambda(pPrime, ast.defaults, ast.flags,funcCode)
+	return Lambda(pPrime, ast.defaults, ast.flags, funcCode)
 
 def heapifyReturn(ast, names):
-	#print ast
 	return Return(heapify(ast.value, names))
 
 def heapifyGetTag(ast, names):
@@ -288,24 +281,15 @@ def runHeapify(ast):
 	#A set of variable names that need to be heapified
 	heapVars = set()
 	
-	#print "getLambdas:"
 	lambdas = getLambdas(ast.node, 0)
 	for n, s in lambdas:
 		s = str(s)
-		#print "Processing lambda"
-		#astpp.printAst(n.code)
-		read, write = varAnalysis.getVars(n.code)
-		#print read | write
-		for var in read | write:
-			#print var
-			if var[var.rfind("_")+1:] != s:
-				#print var,"was referenced in scope",s
-				heapVars.add(var)
-	#print ""
-	#print heapVars
+		write, read = varAnalysis.getVars(n.code)
+		for var in read - write - set(n.argnames):
+			heapVars.add(var)
 	
 	#Now that we have a set of vars that need to be heapified, recurse through the tree
-	
+	heapVars -= set(["True", "False"])
 	heapify(ast, heapVars)
 	
 	#Now initalize all heapVars at the start of the program

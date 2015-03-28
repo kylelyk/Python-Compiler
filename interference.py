@@ -1,15 +1,14 @@
 from x86AST import *
 
 def addEdge(u, v, graph):
-	#if u != "%esp" and u != "%ebp" and v != "%esp" and v != "%ebp":
 	if u in graph:
 		graph[u][0].add(v)
 	else:
 		graph[u] = (set([v]), False)
 
-#guarantees node exists in graph (assuming not %esp, or %ebp)
+#guarantees node exists in graph
 def addNode(reg, graph):
-	if reg and not reg in graph: #and reg != "%esp" and reg != "%ebp":
+	if reg and not reg in graph:
 		graph[reg] = (set(), False)
 
 def interfereNegPop(instr, liveSet, graph):

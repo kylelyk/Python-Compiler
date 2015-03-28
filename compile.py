@@ -3,10 +3,13 @@ from compiler.ast import *
 from x86AST import *
 import closure, uniquify, heapify, explicate, flattener, liveness, interference, colorGraph
 
-debug = True
+debug = False
 def printd(str):
 	if debug:
 		print str
+
+def separator(name):
+	return "="*80 + "\n"+" "*(40-(len(name)/2)) +name +"\n"+"="*80
 
 class GenSym:
 	def __init__(self, s):
@@ -25,6 +28,11 @@ class GenSym:
 	def invalidName(self):
 		return "__$tmp_invalid"
 
+def needsSpill(instr, colors):
+	spill = [False, False]
+	spill[0] = (instr.reg1 and instr.reg1 in colors and colors[instr.reg1] > 7) or (instr.reg1 and instr.offset1)
+	spill[1] = (instr.reg2 and instr.reg2 in colors and colors[instr.reg2] > 7) or (instr.reg2 and instr.offset2)
+	return spill[0] and spill[1]
 
 def spillCode(asm, graph, colors, gen):
 	spilled = []
@@ -48,18 +56,17 @@ def spillCode(asm, graph, colors, gen):
 				#Apparently, cmovel does not allow a displacement in the destination location
 				spilledvar = gen.inc().name()
 				spilled.append(spilledvar)
-				printd( "in spilled cmovel "+spilledvar)
 				if instr.const1:
 					newasm.append(Cmovel(const1=instr.const1, reg2=spilledvar))
 				else:
 					newasm.append(Cmovel(reg1=instr.reg1, reg2=spilledvar))
 				newasm.append(Movl(reg1=spilledvar, reg2=instr.reg2,comment="spilled "+instr.reg2+" into "+spilledvar))
-			elif instr.reg1 and instr.reg1 in colors and colors[instr.reg1] > 7 and instr.reg2 and instr.reg2 in colors and colors[instr.reg2] > 7:
+			elif needsSpill(instr, colors):
 				spilledvar = gen.inc().name()
 				spilled.append(spilledvar)
 				
-				newasm.append(Movl(reg1=instr.reg1,reg2=spilledvar,comment="spilled "+instr.reg2+" into "+spilledvar))
-				newasm.append(instr.__class__(reg1=spilledvar,reg2=instr.reg2))
+				newasm.append(Movl(offset1=instr.offset1,reg1=instr.reg1,reg2=spilledvar,comment="spilled "+instr.reg2+" into "+spilledvar))
+				newasm.append(instr.__class__(reg1=spilledvar,offset2=instr.offset2,reg2=instr.reg2))
 			else:
 				newasm.append(instr)
 		else:
@@ -98,7 +105,6 @@ def locOneArg(instr, color):
 			instr.reg = colorGraph.reg_map[loc]
 
 def locTwoArgs(instr, color):
-	print instr
 	if instr.reg1 and instr.reg1 != "%esp" and instr.reg1 != "%ebp":
 		if instr.reg1 in color:
 			loc = color[instr.reg1]
@@ -131,7 +137,8 @@ def assignLocations(asm, color):
 		elif isinstance(instr, Call) and instr.star:
 			locCall(instr, color)
 
-#Spilled is an array of spilled variables
+#Add spilled flags to vars in new graph
+#Spilled is a list of spilled variables
 def assignSpilled(g, spilled):
 	for k in spilled:
 		g[k] = (g[k][0] if k in g else set([]), True)
@@ -161,15 +168,15 @@ def mainLoop(asm, gen):
 	spilled = False
 	for n, a, colors, allocs, prevSpillList in asm:
 		l = liveness.liveness(a)
-		#printd("liveness:\n"+str(l))
+		printd("liveness:\n"+str(l))
 		g = interference.interfere(a, l, {})
-		#add spilled flag to vars in new graph
-		#printd("interfernce:\n"+str(g))
+		printd("interfernce:\n"+str(g))
 		assignSpilled(g, prevSpillList)
-		#printd("interfernce:\n"+str(g))
+		printd("interfernce:\n"+str(g))
 		colors = colorGraph.color_graph(g)
-		#printd("colors:\n"+str(colors))
+		printd("colors:\n"+str(colors))
 		a, spillList = spillCode(a, g, colors, gen)
+		printd("spillList:"+str(spillList))
 		spilled |= spillList != []
 		prevSpillList = prevSpillList + spillList
 		newasm.append((n, a, colors, allocs, prevSpillList))
@@ -180,53 +187,49 @@ def compile(ast):
 	map = {}
 	state = ()
 	
-	#print "\n\n",ast,"\n" #astpp.printAst(ast)
+	printd(separator("Uniquify Pass"))
 	uniquify.uniquify(ast, GenSym("$"), {})
-	
+	printd(separator("Explicate Pass"))
 	explicate.explicate(ast, gen)
-	#print "\n\nAfter explicate:",ast,"\n" #astpp.printAst(ast)
+	printd(separator("Heapify Pass"))
 	heapify.runHeapify(ast)
+	printd(separator("Closure Pass"))
 	ast = closure.closure(ast, gen, GenSym("$lambda"))
-	#print "before:"
 	#for n, a in ast:
 	#	print "\n\n",n,"= ",astpp.printAst(a)
-	#print "explicated ast:"
-	#astpp.printAst(ast)
+	printd(separator("Flatten Pass"))
 	newast = flattener.runFlatten(ast, gen, map)
-	#print "after:"
-	for n, a in newast:
-		print "\n\n",n,"= ",astpp.printAst(a)
-	#print "flattened ast:"
-	#astpp.printAst(newast)
+	#for n, a in newast:
+	#	print "\n\n",n,"= ",astpp.printAst(a)
+	printd(separator("Instruction Selection Pass"))
+	
 	asm = []
 	pyToAsm(newast, asm, map)
-	
 	printd("psuedo asm:")
-	#print asm
-	#TODO clean this up
 	newasm = []
 	for n, a, alloc in asm:
 		newasm.append((n, a, alloc, {}, []))
 		for instr in a:
 			printd(instr)
-	asm = newasm
 	
+	printd(separator("Looping Algorithms"))
+	asm = newasm
 	maxiter = 10
 	iter = 1
 	asm, cont = mainLoop(asm, gen)
 	while cont and iter != maxiter:
 		iter += 1
-		#print ("Iteration: "+str(iter))
+		printd ("Iteration: "+str(iter))
 		asm, cont = mainLoop(asm, gen)
-	
 	if iter == maxiter:
 		print maxiter,"iterations was not enough to assign spilt variables"
 		sys.exit(1)
 	
+	printd(separator("Last Passes"))
 	newasm = []
+	ifGen = GenSym("")
 	for n, a, colors, alloc, spill in asm:
-		print colors
-		a = removeIf(a, GenSym(""))
+		a = removeIf(a, ifGen)
 		assignLocations(a, colors)
 		space = max(0, max(colors.values())-9)*4
 		for instr in alloc:
@@ -236,10 +239,9 @@ def compile(ast):
 	asm = newasm
 	printd("\n\nfinal asm")
 	for _, func in asm:
-		#print func
+		printd("")
 		for instr in func:
 			printd(instr)
-	#return
 	
 	f = open(re.split("\.[^\.]*$", sys.argv[1])[0]+".s", "w")
 	f.write(addDataSection())
