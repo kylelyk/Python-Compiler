@@ -155,8 +155,7 @@ def heapifyAssign(ast, names):
 		else:
 			return Assign([lhs], heapify(ast.expr, names))
 	else:
-		return Subscript(heapify(lhs.expr, names), lhs.flags, [heapify(lhs.subs[0], names)])
-		
+		return Assign([Subscript(heapify(lhs.expr, names), lhs.flags, [heapify(lhs.subs[0], names)])], heapify(ast.expr, names))
 
 def heapifyName(ast, names):
 	if ast.name in names:
@@ -221,6 +220,9 @@ def heapifyLambda(ast, names):
 def heapifyReturn(ast, names):
 	return Return(heapify(ast.value, names))
 
+def heapifyWhile(ast, names):
+	return While(heapify(ast.test, names), heapify(ast.body, names), None)
+
 def heapifyGetTag(ast, names):
 	return GetTag(heapify(ast.arg))
 
@@ -264,6 +266,7 @@ def heapify(ast, names):
 		IfExp:        heapifyIfExp,
 		Lambda:       heapifyLambda,
 		Return:       heapifyReturn,
+		While:        heapifyWhile,
 		GetTag:       heapifyGetTag,
 		InjectFrom:   heapifyInjectFrom,
 		ProjectTo:    heapifyProjectTo,
