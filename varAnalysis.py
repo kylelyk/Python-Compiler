@@ -75,6 +75,9 @@ def varsSubscript(ast):
 def varsIfExp(ast):
 	return combine(combine(getVars(ast.test), getVars(ast.then)), getVars(ast.else_))
 
+def varsIf(ast):
+	return combine(combine(getVars(ast.tests[0][0]), getVars(ast.tests[0][1])), getVars(ast.else_))
+
 def varsFunction(ast):
 	return set([ast.name]), set()
 
@@ -129,6 +132,7 @@ def getVars(ast):
 		Dict:        varsDict,
 		Subscript:   varsSubscript,
 		IfExp:       varsIfExp,
+		If:          varsIf,
 		Function:    varsFunction,
 		Lambda:      varsLambda,
 		Return:      varsReturn,

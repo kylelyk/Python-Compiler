@@ -357,7 +357,7 @@ def toAsm(ast, assign, asm, map):
 
 #Returns a list of tuples: (funcName, func asm body, [ref1, ref2, ...])
 #where ref1 and ref2 are references to the move stack pointer instructions
-#that will need to be update once register allocation is done
+#that will need to be updated once register allocation is done
 def pyToAsm(ast, asm, map):
 	for n, a in ast:
 		funcAsm = []

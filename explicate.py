@@ -123,8 +123,19 @@ def explicateIfExp(ast, gen):
 	
 	return IfExp(InjectFrom("bool", CallRuntime(Name("is_true"),[test])),then_node, else_node)
 
+#Turn If into IfExp
 def explicateIf(ast, gen):
-	raise NotImplementedError
+	test = explicate(ast.tests[0][0], gen)
+	then_node = explicate(ast.tests[0][1], gen)
+	else_node = explicate(ast.else_, gen)
+	
+	#Check if the input is a list or dict, and spit out appropriate node
+	if isinstance(test,List):
+		return then_node if test.nodes else else_node
+	elif isinstance(test,Dict):
+		return then_node if test.items else else_node
+	
+	return Discard(IfExp(InjectFrom("bool", CallRuntime(Name("is_true"),[test])),then_node, else_node))
 
 def explicateLambda(ast, gen):
 	return Lambda(ast.argnames, ast.defaults, ast.flags, explicate(ast.code, gen))

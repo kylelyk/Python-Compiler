@@ -195,11 +195,9 @@ def compile(ast):
 	heapify.runHeapify(ast)
 	printd(separator("Closure Pass"))
 	ast = closure.closure(ast, gen, GenSym("$lambda"))
-	#for n, a in ast:
-	#	print "\n\n",n,"= ",astpp.printAst(a)
 	printd(separator("Flatten Pass"))
 	newast = flattener.runFlatten(ast, gen, map)
-	#for n, a in newast:
+	#for n, a in ast:
 	#	print "\n\n",n,"= ",astpp.printAst(a)
 	printd(separator("Instruction Selection Pass"))
 	

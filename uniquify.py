@@ -82,6 +82,13 @@ def uniquifyIfExp(ast, gen, names):
 		uniquify(ast.else_, gen, names)
 	)
 
+def uniquifyIf(ast, gen, names):
+	return If(
+		[(uniquify(ast.tests[0][0], gen, names),
+		uniquify(ast.tests[0][1], gen, names))],
+		uniquify(ast.else_, gen, names)
+	)
+
 def uniquifyFunction(ast, gen, names):
 	#Transform into "var = lambda"
 	return uniquify(Assign(
@@ -131,6 +138,7 @@ def uniquify(ast, gen, names):
 		Dict:      uniquifyDict,
 		Subscript: uniquifySubscript,
 		IfExp:     uniquifyIfExp,
+		If:        uniquifyIf,
 		Function:  uniquifyFunction,
 		Lambda:    uniquifyLambda,
 		Return:    uniquifyReturn

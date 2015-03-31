@@ -151,8 +151,8 @@ def flatIfExp(ast, newast, gen, map):
 	#Unifies returns to a single variable
 	thenNewast = Stmt([])
 	elseNewast = Stmt([])
-	thenRet = flatten(ast.then, thenNewast, gen, map)
-	elseRet = flatten(ast.else_, elseNewast, gen, map)
+	thenRet = flatten(ast.then, thenNewast, gen, map) or Const(-1)
+	elseRet = flatten(ast.else_, elseNewast, gen, map) or Const(-1)
 	retVar = Name(gen.inc().name())
 	addAssign(thenRet, thenNewast, gen, map, retVar.name)
 	addAssign(elseRet, elseNewast, gen, map, retVar.name)
