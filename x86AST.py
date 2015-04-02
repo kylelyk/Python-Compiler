@@ -329,6 +329,17 @@ def toAsmReturn(ast, assign, asm, map):
 	asm.append(Ret())
 	return [allocStmt]
 
+def toAsmModWhile(ast, assign, asm, map):
+	newTest = []
+	newBody = []
+	asm.append(Newline())
+	asm.append(ast)
+	asm.append(Newline())
+	l = toAsm(ast.testAssign, assign, newTest, map) + toAsm(ast.bodyAssign, assign, newBody, map)
+	ast.testAssign = newTest + [Cmpl(reg1="True",reg2=ast.test.name,comment="cmp True, "+ast.test.name)]
+	ast.bodyAssign = newBody
+	return l
+
 #Returns a list of references to asm instructions that either 
 #allocate or deallocate stack space in the lambda
 def toAsm(ast, assign, asm, map):
@@ -352,7 +363,8 @@ def toAsm(ast, assign, asm, map):
 		Subscript:   toAsmSubscript,
 		IfStmt:      toAsmIfStmt,
 		Lambda:      toAsmLambda,
-		Return:      toAsmReturn
+		Return:      toAsmReturn,
+		ModWhile:    toAsmModWhile
 	}[ast.__class__](ast, assign, asm, map)
 
 #Returns a list of tuples: (funcName, func asm body, [ref1, ref2, ...])

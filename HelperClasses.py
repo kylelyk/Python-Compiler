@@ -29,6 +29,32 @@ class IfStmt(Node):
 		ret += "\nendif"
 		return ret
 
+#Flattened version of While
+#is reused for both python ast and asm instructions
+class ModWhile(Node):
+	def __init__(self, test, testAssign, bodyAssign, liveTest, liveBody):
+		'''test needs to be a name but is made into an instruction in 
+		pyToAsm (spillCode function needs this);
+		testAssign and bodyAssign need to be lists of assignments/asm instructions
+		that would be executed on that branch.'''
+		self.test = test
+		self.testAssign = testAssign
+		self.bodyAssign = bodyAssign
+		self.liveTest = liveTest
+		self.liveBody = liveBody
+	def getChildren(self):
+		return (self.test, self.testAssign, self.bodyAssign, self.liveTest, self.liveBody)
+	def __str__(self):
+		ret = "Start While\n"
+		for instr in self.bodyAssign:
+			ret += str(instr) + "\n"
+		ret += "\nCheck:\n"
+		for instr in self.testAssign:
+			ret += str(instr) + "\n"
+		ret += "\nIf "+str(self.test)+" == True goto Start"
+		ret += "\nendwhile\n"
+		return ret
+
 class GetTag(Node):
 	def __init__(self, arg):
 		self.arg = arg
@@ -81,6 +107,6 @@ class CallRuntime(Node):
 		self.node = node
 		self.args = args
 	def getChildren(self):
-		return (self.node, self.args)
+		return [self.node] + self.args
 	def __str__(self):
-		return "CallRuntime("+str(self.node)+", "+str(self.args)+")"
+		return "CallRuntime("+str(self.node)+", ["+reduce(lambda acc, a : acc + str(a), self.args, "")+"])"

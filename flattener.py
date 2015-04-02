@@ -165,8 +165,8 @@ def flatIfExp(ast, newast, gen, map):
 		thenNewast,
 		elseNewast,
 		retVar,
-		Set([]),
-		Set([])
+		set(),
+		set()
 	))
 	return retVar
 
@@ -177,11 +177,19 @@ def flatLambda(ast, newast, gen, map):
 	flatten(ast.code, flat_body, gen, map)
 	return Lambda(ast.argnames, ast.defaults, ast.flags, flat_body)
 
-#Have to break the contract here
 def flatReturn(ast, newast, gen, map):
 	name = flatten(ast.value, newast, gen, map)
 	newast.nodes.append(Return(name))
 	return name
+
+def flatWhile(ast, newast, gen, map):
+	#Will not be fully flattened in order to preserve correctness
+	testAssign = Stmt([])
+	test = flatten(ast.test, testAssign, gen, map)
+	bodyAssign = Stmt([])
+	flatten(ast.body, bodyAssign, gen, map)
+	newast.nodes.append(ModWhile(test, testAssign, bodyAssign, set(), set()))
+	return None
 
 def flatGetTag(ast, newast, gen, map):
 	simple = flatten(ast.arg, newast, gen, map)
@@ -234,6 +242,7 @@ def flatten(ast, newast, gen, map):
 		IfExp:       flatIfExp,
 		Lambda:      flatLambda,
 		Return:      flatReturn,
+		While:       flatWhile,
 		GetTag:      flatGetTag,
 		InjectFrom:  flatInjectFrom,
 		ProjectTo:   flatProjectTo,

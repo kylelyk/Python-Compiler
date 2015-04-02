@@ -56,26 +56,31 @@ def interfereIfStmt(instr, liveSet, graph):
 	interfere(instr.thenAssign, instr.liveThen, graph)
 	interfere(instr.elseAssign, instr.liveElse, graph)
 
+def interfereModWhile(instr, liveSet, graph):
+	interfere(instr.testAssign, instr.liveTest, graph)
+	interfere(instr.bodyAssign, instr.liveBody, graph)
+
 def interfere(asm, liveness, graph):
 	interferePass = lambda i,l,g: None
 	for index, instr in enumerate(asm):
 		{
-			Pushl:   interferePass,
-			Popl:    interfereNegPop,
-			Negl:    interfereNegPop,
-			Movl:    interfereMov,
-			Addl:    interfereTwoArg,
-			Subl:    interfereTwoArg,
-			Orl:     interfereTwoArg,
-			Andl:    interfereTwoArg,
-			Xorl:    interfereTwoArg,
-			Cmpl:    interfereTwoArg,
-			Cmovel:  interfereTwoArg,
-			Call:    interfereCall,
-			Leave:   interferePass,
-			Ret:     interferePass,
-			Newline: interferePass,
-			Label:   interferePass,
-			IfStmt:  interfereIfStmt
+			Pushl:    interferePass,
+			Popl:     interfereNegPop,
+			Negl:     interfereNegPop,
+			Movl:     interfereMov,
+			Addl:     interfereTwoArg,
+			Subl:     interfereTwoArg,
+			Orl:      interfereTwoArg,
+			Andl:     interfereTwoArg,
+			Xorl:     interfereTwoArg,
+			Cmpl:     interfereTwoArg,
+			Cmovel:   interfereTwoArg,
+			Call:     interfereCall,
+			Leave:    interferePass,
+			Ret:      interferePass,
+			Newline:  interferePass,
+			Label:    interferePass,
+			IfStmt:   interfereIfStmt,
+			ModWhile: interfereModWhile
 		}[instr.__class__](instr, liveness[index], graph)
 	return graph

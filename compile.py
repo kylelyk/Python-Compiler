@@ -51,6 +51,17 @@ def spillCode(asm, graph, colors, gen):
 				instr.liveThen,
 				instr.liveElse
 			))
+		elif isinstance(instr, ModWhile):
+			testSpilled, spill2 = spillCode(instr.testAssign, graph, colors, gen)
+			bodySpilled, spill1 = spillCode(instr.bodyAssign, graph, colors, gen)
+			spilled = spilled + spill1 + spill2
+			newasm.append(ModWhile(
+				instr.test,
+				testSpilled,
+				bodySpilled,
+				instr.liveTest,
+				instr.liveBody
+			))
 		elif len(bases) and bases[0] == TwoArgs:
 			if isinstance(instr, Cmovel) and instr.reg2 and colors[instr.reg2] > 7:
 				#Apparently, cmovel does not allow a displacement in the destination location
@@ -73,18 +84,27 @@ def spillCode(asm, graph, colors, gen):
 			newasm.append(instr)
 	return newasm, spilled
 
-def removeIf(asm, gen):
+def remove(asm, gen):
 	newasm = []
 	for instr in asm:
 		if isinstance(instr, IfStmt):
 			labelName1 = "elselbl_" + gen.inc().get()
 			labelName2 = "endlbl_" + gen.get()
 			newasm.append(Jl(labelName1))
-			newasm.extend(removeIf(instr.thenAssign, gen))
+			newasm.extend(remove(instr.thenAssign, gen))
 			newasm.append(Jmp(labelName2))
 			newasm.append(Label(labelName1))
-			newasm.extend(removeIf(instr.elseAssign, gen))
+			newasm.extend(remove(instr.elseAssign, gen))
 			newasm.append(Label(labelName2))
+		elif isinstance(instr, ModWhile):
+			labelName1 = "whilelbl_" + gen.inc().get()
+			labelName2 = "checklbl_" + gen.get()
+			newasm.append(Jmp(labelName2))
+			newasm.append(Label(labelName1))
+			newasm.extend(remove(instr.bodyAssign, gen))
+			newasm.append(Label(labelName2))
+			newasm.extend(remove(instr.testAssign, gen))
+			newasm.append(Je(labelName1))
 		else:
 			newasm.append(instr)
 	return newasm
@@ -195,12 +215,12 @@ def compile(ast):
 	heapify.runHeapify(ast)
 	printd(separator("Closure Pass"))
 	ast = closure.closure(ast, gen, GenSym("$lambda"))
-	printd(separator("Flatten Pass"))
-	newast = flattener.runFlatten(ast, gen, map)
 	#for n, a in ast:
 	#	print "\n\n",n,"= ",astpp.printAst(a)
-	printd(separator("Instruction Selection Pass"))
+	printd(separator("Flatten Pass"))
+	newast = flattener.runFlatten(ast, gen, map)
 	
+	printd(separator("Instruction Selection Pass"))
 	asm = []
 	pyToAsm(newast, asm, map)
 	printd("psuedo asm:")
@@ -225,9 +245,9 @@ def compile(ast):
 	
 	printd(separator("Last Passes"))
 	newasm = []
-	ifGen = GenSym("")
+	rmGen = GenSym("")
 	for n, a, colors, alloc, spill in asm:
-		a = removeIf(a, ifGen)
+		a = remove(a, rmGen)
 		assignLocations(a, colors)
 		space = max(0, max(colors.values())-9)*4
 		for instr in alloc:

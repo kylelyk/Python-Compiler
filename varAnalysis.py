@@ -87,6 +87,9 @@ def varsLambda(ast):
 def varsReturn(ast):
 	return getVars(ast.value)
 
+def varsWhile(ast):
+	return combine(getVars(ast.test), getVars(ast.body))
+
 def varsGetTag(ast):
 	return getVars(ast.arg)
 
@@ -136,6 +139,7 @@ def getVars(ast):
 		Function:    varsFunction,
 		Lambda:      varsLambda,
 		Return:      varsReturn,
+		While:       varsWhile,
 		GetTag:      varsGetTag,
 		InjectFrom:  varsInjectFrom,
 		ProjectTo:   varsProjectTo,

@@ -34,8 +34,43 @@ def liveIf(instr, prev):
 	part2 = liveness([instr.elseAssign[0]], instr.liveElse[0])
 	return part1[0] | part2[0]
 
+#L4 = Lafter
+#L1 = L4 U L2 U {guard}
+#L0 = Lbefore(test, L1)
+#L3 = Lbefore(test, L1)
+#L2 = Lbefore(body, L3)
+#return L0
+def liveWhile(instr, prev):
+	#If a variable is live at any time during the while loop,
+	#it needs to be live during the whole loop
+	guard = instr.test.name
+	test = instr.testAssign
+	body = instr.bodyAssign
+	updated = True
+	lCur = [set(), set(), set(), set(), set(prev)]
+	lPrev = []
+	while updated:
+		lPrev = list(lCur)
+		lCur[0] = liveness(test, lCur[1])[0]
+		lCur[1] = lCur[4] | lCur[2] | set([guard])
+		lCur[2] = liveness(body, lCur[3])[0]
+		lCur[3] = liveness(test, lCur[1])[0]
+		lCur[4] = set(prev)
+		updated = lCur != lPrev
+	instr.liveTest = liveness(test, lCur[1])
+	instr.liveBody = liveness(body, lCur[3])
+	return lCur[0]
+
+#Finds the liveness of custom nodes
+def liveCustom(instr, prev):
+	return {
+		IfStmt:   liveIf,
+		ModWhile: liveWhile
+	}[instr.__class__](instr, prev)
+	
+
 #takes in a set of instructions and a set of live variables after the set of instructions
-def liveness(asm, live=set([])):
+def liveness(asm, live=set()):
 	live_after = [0]*len(asm)
 	l = len(live_after) - 1
 	for index, instr in enumerate(reversed(asm)):
@@ -48,7 +83,7 @@ def liveness(asm, live=set([])):
 			live_after[l-index-1] = {
 				OneArg:  liveOneArg,
 				TwoArgs: liveTwoArgs,
-				Node:    liveIf
+				Node:    liveCustom
 				}[bases[0]](instr, prev)
 		else:
 			live_after[l-index-1] = prev

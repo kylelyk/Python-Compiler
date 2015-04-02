@@ -2,7 +2,7 @@ a = 9
 b = 10
 
 def f(y):
-	if y:
+	if y != 0:
 		a = 4
 		print a
 		return 6

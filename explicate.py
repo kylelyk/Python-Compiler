@@ -143,6 +143,9 @@ def explicateLambda(ast, gen):
 def explicateReturn(ast, gen):
 	return Return(explicate(ast.value, gen))
 
+def explicateWhile(ast, gen):
+	newTest = InjectFrom("bool", CallRuntime(Name("is_true"),[explicate(ast.test, gen)]))
+	return While(newTest, explicate(ast.body, gen), None)
 
 def explicate(ast, gen):
 	return {
@@ -167,5 +170,6 @@ def explicate(ast, gen):
 		IfExp:       explicateIfExp,
 		If:          explicateIf,
 		Lambda:      explicateLambda,
-		Return:      explicateReturn
+		Return:      explicateReturn,
+		While:       explicateWhile
 	}[ast.__class__](ast, gen)

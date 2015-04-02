@@ -48,7 +48,6 @@ def uniquifyName(ast, gen, names):
 	return Name(names[ast.name])
 
 def uniquifyAssName(ast, gen, names):
-	#print "names:",names
 	return AssName(names[ast.name], ast.flags)
 
 def uniquifyCallFunc(ast, gen, names):
@@ -115,6 +114,9 @@ def uniquifyLambda(ast, gen, names):
 def uniquifyReturn(ast, gen, names):
 	return Return(uniquify(ast.value, gen, names))
 
+def uniquifyWhile(ast, gen, names):
+	return While(uniquify(ast.test, gen, names), uniquify(ast.body, gen, names), None)
+
 #names is a dictionary which keeps track of all variables seen
 #so far and what they should be renamed to
 def uniquify(ast, gen, names):
@@ -141,5 +143,6 @@ def uniquify(ast, gen, names):
 		If:        uniquifyIf,
 		Function:  uniquifyFunction,
 		Lambda:    uniquifyLambda,
-		Return:    uniquifyReturn
+		Return:    uniquifyReturn,
+		While:     uniquifyWhile
 	}[ast.__class__](ast, gen, names)

@@ -129,13 +129,18 @@ def closureLambda(ast, gen, lambdaGen):
 	#Create the function definition for the top level scope
 	newParams = [free_vars_param] + ast.argnames
 	funcDef = Lambda(newParams, ast.defaults, ast.flags, new_body)
-	#Create the local, closure convention'd reference to the function
+	#Create the local, closure conversion'd reference to the function
 	closedLambda = InjectFrom("big", CallRuntime(Name('create_closure'),[Const(lambdaName), List([Name(fvar) for fvar in free_vars])]))
 	return closedLambda, l_body + [(lambdaName, funcDef)]
 
 def closureReturn(ast, gen, lambdaGen):
 	ast, l = closure(ast.value, gen, lambdaGen)
 	return Return(ast), l
+
+def closureWhile(ast, gen, lambdaGen):
+	ast_test, l_test = closure(ast.test, gen, lambdaGen)
+	ast_body, l_body = closure(ast.body, gen, lambdaGen)
+	return While(ast_test, ast_body, None), l_test + l_body
 
 def closureGetTag(ast, gen, lambdaGen):
 	ast, l = closure(ast.arg, gen, lambdaGen)
@@ -152,7 +157,7 @@ def closureProjectTo(ast, gen, lambdaGen):
 def closureLet(ast, gen, lambdaGen):
 	ast_rhs, l_rhs = closure(ast.rhs, gen, lambdaGen)
 	ast_body, l_body = closure(ast.body, gen, lambdaGen)
-	return Let(ast.var, ast_rhs, ast_body), l_rhs+l_body
+	return Let(ast.var, ast_rhs, ast_body), l_rhs + l_body
 
 def closureIsType(ast, gen, lambdaGen):
 	astN, l = closure(ast.arg, gen, lambdaGen)
@@ -187,6 +192,7 @@ def closure(ast, gen, lambdaGen):
 		IfExp:       closureIfExp,
 		Lambda:      closureLambda,
 		Return:      closureReturn,
+		While:       closureWhile,
 		GetTag:      closureGetTag,
 		InjectFrom:  closureInjectFrom,
 		ProjectTo:   closureProjectTo,
