@@ -1,9 +1,11 @@
 from compiler.ast import *
+from HelperClasses import *
 import astpp
 import varAnalysis
 
 #Helper to get new name and add it to names dictionary
 def getNewName(name, gen, names):
+	print "name:",name
 	newName = name + gen.name()
 	names[name] = newName
 	return newName
@@ -12,6 +14,7 @@ def getNewName(name, gen, names):
 #name dictionary
 def addNewVars(ast, gen, names):
 	write, read = varAnalysis.getVars(ast)
+	print "write:",write
 	for name in write:
 		getNewName(name, gen, names)
 
@@ -42,6 +45,7 @@ def uniquifyAssign(ast, gen, names):
 	return Assign([uniquify(ast.nodes[0], gen, names)], uniquify(ast.expr, gen, names))
 
 def uniquifyName(ast, gen, names):
+	print "uniquifyName names:",names
 	#TODO remove this hack
 	if ast.name == "input" or ast.name == "True" or ast.name == "False":
 		return ast
@@ -52,6 +56,9 @@ def uniquifyAssName(ast, gen, names):
 
 def uniquifyCallFunc(ast, gen, names):
 	return CallFunc(uniquify(ast.node, gen, names), [uniquify(arg, gen, names) for arg in ast.args])
+
+def uniquifyCallRuntime(ast, gen, names):
+	return CallRuntime(ast.node, [uniquify(arg, gen, names) for arg in ast.args])
 
 def uniquifyCompare(ast, gen, names):
 	return Compare(uniquify(ast.expr, gen, names), [(ast.ops[0][0], uniquify(ast.ops[0][1], gen, names))])
@@ -117,32 +124,49 @@ def uniquifyReturn(ast, gen, names):
 def uniquifyWhile(ast, gen, names):
 	return While(uniquify(ast.test, gen, names), uniquify(ast.body, gen, names), None)
 
+def uniquifyAssAttr(ast, gen, names):
+	return AssAttr(uniquify(ast.expr, gen, names), names[ast.attrname], ast.flags)
+
+def uniquifyGetattr(ast, gen, names):
+	return Getattr(uniquify(ast.expr, gen, names), names[ast.attrname])
+
+def uniquifyInjectFrom(ast, gen, names):
+	return InjectFrom(ast.typ, uniquify(ast.arg, gen, names))
+
+def uniquifyLet(ast, gen, names):
+	return Let(uniquify(ast.var, gen, names), uniquify(ast.rhs, gen, names), uniquify(ast.body, gen, names))
+
 #names is a dictionary which keeps track of all variables seen
 #so far and what they should be renamed to
 def uniquify(ast, gen, names):
 	return {
-		Module:    uniquifyModule,
-		Stmt:      uniquifyStmt,
-		Printnl:   uniquifyPrintnl,
-		Const:     uniquifyConst,
-		UnarySub:  uniquifyUnarySub,
-		Add:       uniquifyAdd,
-		Discard:   uniquifyDiscard,
-		Assign:    uniquifyAssign,
-		Name:      uniquifyName,
-		AssName:   uniquifyAssName,
-		CallFunc:  uniquifyCallFunc,
-		Compare:   uniquifyCompare,
-		Or:        uniquifyOr,
-		And:       uniquifyAnd,
-		Not:       uniquifyNot,
-		List:      uniquifyList,
-		Dict:      uniquifyDict,
-		Subscript: uniquifySubscript,
-		IfExp:     uniquifyIfExp,
-		If:        uniquifyIf,
-		Function:  uniquifyFunction,
-		Lambda:    uniquifyLambda,
-		Return:    uniquifyReturn,
-		While:     uniquifyWhile
+		Module:      uniquifyModule,
+		Stmt:        uniquifyStmt,
+		Printnl:     uniquifyPrintnl,
+		Const:       uniquifyConst,
+		UnarySub:    uniquifyUnarySub,
+		Add:         uniquifyAdd,
+		Discard:     uniquifyDiscard,
+		Assign:      uniquifyAssign,
+		Name:        uniquifyName,
+		AssName:     uniquifyAssName,
+		CallFunc:    uniquifyCallFunc,
+		CallRuntime: uniquifyCallRuntime,
+		Compare:     uniquifyCompare,
+		Or:          uniquifyOr,
+		And:         uniquifyAnd,
+		Not:         uniquifyNot,
+		List:        uniquifyList,
+		Dict:        uniquifyDict,
+		Subscript:   uniquifySubscript,
+		IfExp:       uniquifyIfExp,
+		If:          uniquifyIf,
+		Function:    uniquifyFunction,
+		Lambda:      uniquifyLambda,
+		Return:      uniquifyReturn,
+		While:       uniquifyWhile,
+		#AssAttr:     uniquifyAssAttr,
+		#Getattr:     uniquifyGetattr,
+		InjectFrom:  uniquifyInjectFrom,
+		Let:         uniquifyLet
 	}[ast.__class__](ast, gen, names)

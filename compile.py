@@ -1,9 +1,9 @@
 import compiler, sys, re, astpp, os
 from compiler.ast import *
 from x86AST import *
-import closure, uniquify, heapify, explicate, flattener, liveness, interference, colorGraph
+import declassify, uniquify, heapify, explicate, closure, flattener, liveness, interference, colorGraph
 
-debug = False
+debug = True
 def printd(str):
 	if debug:
 		print str
@@ -171,8 +171,8 @@ def optimizePass1(asm):
 			newasm.append(instr)
 	return newasm
 
-def addDataSection():
-	return '''.data
+def addDataSection(allocs):
+	s = '''.data
 negError:
 .asciz "Attempt to negate a non basic type.\\n"
 addError:
@@ -180,8 +180,13 @@ addError:
 debugMsg1:
 .asciz "Debug Message 1.\\n"
 debugMsg2:
-.asciz "Debug Message 2.\\n"
-.text\n'''
+.asciz "Debug Message 2.\\n"\n'''
+	for a in allocs:
+		s += '''%s:
+.asciz "%s"
+''' % (a, a)
+	s += "\n.text\n"
+	return s
 
 def mainLoop(asm, gen):
 	newasm = []
@@ -206,19 +211,24 @@ def compile(ast):
 	gen = GenSym("__$tmp")
 	map = {}
 	state = ()
-	
+	strings = set()
+	printd(separator("Declassify Pass"))
+	declassify.declassify(ast, gen, None, None, strings)
+	astpp.printAst(ast)
 	printd(separator("Uniquify Pass"))
 	uniquify.uniquify(ast, GenSym("$"), {})
 	printd(separator("Explicate Pass"))
 	explicate.explicate(ast, gen)
+	astpp.printAst(ast)
 	printd(separator("Heapify Pass"))
 	heapify.runHeapify(ast)
 	printd(separator("Closure Pass"))
 	ast = closure.closure(ast, gen, GenSym("$lambda"))
-	#for n, a in ast:
-	#	print "\n\n",n,"= ",astpp.printAst(a)
 	printd(separator("Flatten Pass"))
-	newast = flattener.runFlatten(ast, gen, map)
+	newast = flattener.runFlatten(ast, gen, map, strings)
+	print strings
+	for n, a in ast:
+		print "\n\n",n,"= ",astpp.printAst(a)
 	
 	printd(separator("Instruction Selection Pass"))
 	asm = []
@@ -262,7 +272,7 @@ def compile(ast):
 			printd(instr)
 	
 	f = open(re.split("\.[^\.]*$", sys.argv[1])[0]+".s", "w")
-	f.write(addDataSection())
+	f.write(addDataSection(strings))
 	f.write(".globl ")
 	for n, _ in asm:
 		f.write(n+",")

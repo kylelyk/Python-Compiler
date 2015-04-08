@@ -148,12 +148,15 @@ def heapifyDiscard(ast, names):
 	return Discard(heapify(ast.expr, names))
 
 def heapifyAssign(ast, names):
+	print ast
 	lhs = ast.nodes[0]
 	if isinstance(lhs, AssName):
 		if lhs.name in names:
 			return Assign([Subscript(Name(lhs.name), "OP_ASSIGN", [Const(0)])], heapify(ast.expr, names))
 		else:
 			return Assign([lhs], heapify(ast.expr, names))
+	elif isinstance(lhs, AssAttr):
+		return Assign([heapify(lhs, names)], heapify(ast.expr, names))
 	else:
 		return Assign([Subscript(heapify(lhs.expr, names), lhs.flags, [heapify(lhs.subs[0], names)])], heapify(ast.expr, names))
 
@@ -223,6 +226,12 @@ def heapifyReturn(ast, names):
 def heapifyWhile(ast, names):
 	return While(heapify(ast.test, names), heapify(ast.body, names), None)
 
+def heapifyAssAttr(ast, names):
+	return AssAttr(heapify(ast.expr, names), ast.attrname, ast.flags)
+
+def heapifyGetattr(ast, names):
+	return Getattr(heapify(ast.expr, names), ast.attrname)
+
 def heapifyGetTag(ast, names):
 	return GetTag(heapify(ast.arg))
 
@@ -267,6 +276,8 @@ def heapify(ast, names):
 		Lambda:       heapifyLambda,
 		Return:       heapifyReturn,
 		While:        heapifyWhile,
+		#AssAttr:      heapifyAssAttr,
+		#Getattr:      heapifyGetattr,
 		GetTag:       heapifyGetTag,
 		InjectFrom:   heapifyInjectFrom,
 		ProjectTo:    heapifyProjectTo,

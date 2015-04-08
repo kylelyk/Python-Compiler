@@ -11,6 +11,7 @@ def combine(first, second):
 	return (f1 | s1, f2 | s2)
 
 def varsModule(ast):
+	astpp.printAst(ast)
 	#need to do disjunct with free and written_to?
 	return getVars(ast.node)
 
@@ -37,6 +38,7 @@ def varsAssign(ast):
 	if isinstance(ast.nodes[0], Subscript):
 		return combine(getVars(ast.nodes[0]), getVars(ast.expr))
 	else:
+		astpp.printAst(ast)
 		return combine(getVars(ast.nodes[0]), getVars(ast.expr))
 
 def varsName(ast):
@@ -90,6 +92,16 @@ def varsReturn(ast):
 def varsWhile(ast):
 	return combine(getVars(ast.test), getVars(ast.body))
 
+def varsClass(ast):
+	return set([ast.name]), set()
+
+#Pretty sure this is wrong
+def varsAssAttr(ast):
+	return combine(getVars(ast.expr), (set([ast.attrname]), set()))
+
+def varsGetattr(ast):
+	return combine(getVars(ast.expr), (set(), set([ast.attrname])))
+
 def varsGetTag(ast):
 	return getVars(ast.arg)
 
@@ -114,6 +126,7 @@ def varsThrowError(ast):
 #Returns a tuple of: set of all variables written to, set of all variables read from
 #In the current scope only and does not recurse on functions and lambda's
 def getVars(ast):
+	print ast
 	return {
 		Module:      varsModule,
 		Stmt:        varsStmt,
@@ -140,6 +153,9 @@ def getVars(ast):
 		Lambda:      varsLambda,
 		Return:      varsReturn,
 		While:       varsWhile,
+		Class:       varsClass,
+		AssAttr:     varsAssAttr,
+		Getattr:     varsGetattr,
 		GetTag:      varsGetTag,
 		InjectFrom:  varsInjectFrom,
 		ProjectTo:   varsProjectTo,

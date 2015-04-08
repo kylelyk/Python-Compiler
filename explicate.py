@@ -49,8 +49,58 @@ def explicateName(ast, gen):
 	return ast
 
 def explicateCallFunc(ast, gen):
-	return CallFunc(explicate(ast.node, gen), [explicate(arg, gen) for arg in ast.args])
+	def rec(index, len, args, cont):
+		print "rec called with:", index, len, args
+		if index < len:
+			return Let(args[index][0], args[index][1], rec(index+1, len, args, cont))
+		else:
+			return cont
 	
+	f = Name(gen.inc().name())
+	o = Name(gen.inc().name())
+	newFunc = explicate(ast.node, gen)
+	args = [(Name(gen.inc().name()), explicate(arg, gen)) for arg in ast.args]
+	print "ast.args:", ast.args
+	print "args:",args
+	return Let(
+		f, 
+		newFunc, 
+		rec(0, len(args), args, IfExp(
+			InjectFrom("bool", IsType("class",f)),
+			Let(
+				o,
+				InjectFrom("big", CallRuntime(Name("create_object"),[f])),
+				IfExp(
+					InjectFrom("bool", CallRuntime(Name("has_attr"), [f, Const("__init__")])),
+					Let(
+						Name(gen.inc().name()),
+						CallFunc(
+							InjectFrom("big", CallRuntime(Name("get_function"), [CallRuntime(Name("get_attr"), [f, Const("__init__")])])),
+							[o] + [tup[0] for tup in args]
+						),
+						o
+					),
+					o
+				)
+			),
+			IfExp(
+				InjectFrom("bool", IsType("bound_method",f)),
+				CallFunc(
+					InjectFrom("big", CallRuntime(Name("get_function"), [f])), 
+					[InjectFrom("big", CallRuntime(Name("get_receiver"), [f]))] + [tup[0] for tup in args]
+				),
+				IfExp(
+					InjectFrom("bool", IsType("unbound_method",f)),
+					CallFunc(
+						InjectFrom("big", CallRuntime(Name("get_function"), [f])), 
+						[tup[0] for tup in args]
+					),
+					CallFunc(explicate(ast.node, gen), [explicate(arg, gen) for arg in ast.args])
+				)
+			)
+		))
+	)
+
 def explicateCallRuntime(ast, gen):
 	return CallRuntime(ast.node, [explicate(arg, gen) for arg in ast.args])
 
@@ -147,6 +197,18 @@ def explicateWhile(ast, gen):
 	newTest = InjectFrom("bool", CallRuntime(Name("is_true"),[explicate(ast.test, gen)]))
 	return While(newTest, explicate(ast.body, gen), None)
 
+def explicateAssAttr(ast, gen):
+	return AssAttr(explicate(ast.expr, gen), ast.attrname, ast.flags)
+
+def explicateGetattr(ast, gen):
+	return Getattr(explicate(ast.expr, gen), ast.attrname)
+
+def explicateInjectFrom(ast, gen):
+	return InjectFrom(ast.typ, explicate(ast.arg, gen))
+
+def explicateLet(ast, gen):
+	return Let(ast.var, explicate(ast.rhs, gen), explicate(ast.body, gen))
+
 def explicate(ast, gen):
 	return {
 		Module:      explicateModule,
@@ -171,5 +233,9 @@ def explicate(ast, gen):
 		If:          explicateIf,
 		Lambda:      explicateLambda,
 		Return:      explicateReturn,
-		While:       explicateWhile
+		While:       explicateWhile,
+		#AssAttr:     explicateAssAttr,
+		#Getattr:     explicateGetattr,
+		InjectFrom:  explicateInjectFrom,
+		Let:         explicateLet
 	}[ast.__class__](ast, gen)

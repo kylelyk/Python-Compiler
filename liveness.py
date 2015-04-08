@@ -46,10 +46,17 @@ def liveWhile(instr, prev):
 	guard = instr.test.name
 	test = instr.testAssign
 	body = instr.bodyAssign
+	print "\n\nbody ast:",
+	for inst in body:
+		print inst
+	print "\n\ntest ast:"
+	for inst in test:
+		print inst
 	updated = True
 	lCur = [set(), set(), set(), set(), set(prev)]
 	lPrev = []
 	while updated:
+		print "body liveness:",liveness(body, lCur[3])
 		lPrev = list(lCur)
 		lCur[0] = liveness(test, lCur[1])[0]
 		lCur[1] = lCur[4] | lCur[2] | set([guard])
@@ -59,6 +66,8 @@ def liveWhile(instr, prev):
 		updated = lCur != lPrev
 	instr.liveTest = liveness(test, lCur[1])
 	instr.liveBody = liveness(body, lCur[3])
+	for c in lCur:
+		print c
 	return lCur[0]
 
 #Finds the liveness of custom nodes
@@ -67,7 +76,6 @@ def liveCustom(instr, prev):
 		IfStmt:   liveIf,
 		ModWhile: liveWhile
 	}[instr.__class__](instr, prev)
-	
 
 #takes in a set of instructions and a set of live variables after the set of instructions
 def liveness(asm, live=set()):

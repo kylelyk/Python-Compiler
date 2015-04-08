@@ -142,6 +142,12 @@ def closureWhile(ast, gen, lambdaGen):
 	ast_body, l_body = closure(ast.body, gen, lambdaGen)
 	return While(ast_test, ast_body, None), l_test + l_body
 
+def closureAssAttr(ast, gen, lambdaGen):
+	return ast, []
+
+def closureGetattr(ast, gen, lambdaGen):
+	return ast, []
+
 def closureGetTag(ast, gen, lambdaGen):
 	ast, l = closure(ast.arg, gen, lambdaGen)
 	return GetTag(ast), l
@@ -193,6 +199,8 @@ def closure(ast, gen, lambdaGen):
 		Lambda:      closureLambda,
 		Return:      closureReturn,
 		While:       closureWhile,
+		#AssAttr:     closureAssAttr,
+		#Getattr:     closureGetattr,
 		GetTag:      closureGetTag,
 		InjectFrom:  closureInjectFrom,
 		ProjectTo:   closureProjectTo,
