@@ -226,7 +226,7 @@ def compile(ast):
 	ast = closure.closure(ast, gen, GenSym("$lambda"))
 	printd(separator("Flatten Pass"))
 	newast = flattener.runFlatten(ast, gen, map, strings)
-	#print strings
+	print strings
 	for n, a in ast:
 		#print "\n\n",n,"= ",astpp.printAst(a)
 		continue

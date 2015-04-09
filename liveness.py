@@ -46,28 +46,32 @@ def liveWhile(instr, prev):
 	guard = instr.test.name
 	test = instr.testAssign
 	body = instr.bodyAssign
-	print "\n\nbody ast:",
-	for inst in body:
-		print inst
-	print "\n\ntest ast:"
-	for inst in test:
-		print inst
+	#print "\n\nbody ast:",
+	#for inst in body:
+	#	print inst
+	#print "\n\ntest ast:"
+	#for inst in test:
+	#	print inst
 	updated = True
 	lCur = [set(), set(), set(), set(), set(prev)]
 	lPrev = []
 	while updated:
-		print "body liveness:",liveness(body, lCur[3])
+		#print "body liveness:",liveness(body, lCur[3])
 		lPrev = list(lCur)
 		lCur[0] = liveness(test, lCur[1])[0]
 		lCur[1] = lCur[4] | lCur[2] | set([guard])
 		lCur[2] = liveness(body, lCur[3])[0]
 		lCur[3] = liveness(test, lCur[1])[0]
 		lCur[4] = set(prev)
+		k = 0
+		#for c in lCur:
+		#	print "lCur[", k, "]", c
+		#	k = k + 1
 		updated = lCur != lPrev
 	instr.liveTest = liveness(test, lCur[1])
 	instr.liveBody = liveness(body, lCur[3])
-	for c in lCur:
-		print c
+	#for c in lCur:
+	#	print c
 	return lCur[0]
 
 #Finds the liveness of custom nodes

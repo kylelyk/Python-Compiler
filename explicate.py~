@@ -60,8 +60,8 @@ def explicateCallFunc(ast, gen):
 	o = Name(gen.inc().name())
 	newFunc = explicate(ast.node, gen)
 	args = [(Name(gen.inc().name()), explicate(arg, gen)) for arg in ast.args]
-	#print "ast.args:", ast.args
-	#print "args:",args
+	print "ast.args:", ast.args
+	print "args:",args
 	return Let(
 		f, 
 		newFunc, 

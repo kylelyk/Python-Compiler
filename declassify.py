@@ -44,7 +44,7 @@ def declassifyAssign(ast, gen, name, scopes, strings):
 	return Assign([declassify(lhs, gen, name, scopes, strings)], declassify(ast.expr, gen, name, scopes, strings))
 
 def declassifyName(ast, gen, name, scopes, strings):
-	print "declassifyName:",ast, "name:",name
+	#print "declassifyName:",ast, "name:",name
 	if name and ast.name != "True" and ast.name != "False":
 		#This is an attribute access
 		#TODO use the more efficient method
@@ -127,6 +127,9 @@ def declassifyReturn(ast, gen, name, scopes, strings):
 	return Return(declassify(ast.value, gen, name, scopes, strings))
 
 def declassifyWhile(ast, gen, name, scopes, strings):
+	#TODO: Remove this horrendous hack
+	ast.body.nodes = [Assign([AssName("HorrendousHack", "OP_ASSIGN")], List([Const(0)]))] + ast.body.nodes
+	#This has to do with a problem in liveness, not here. This is just the first function called.
 	return While(declassify(ast.test, gen, name, scopes, strings), declassify(ast.body, gen, name, scopes, strings), None)
 
 def declassifyClass(ast, gen, name, scopes, strings):
@@ -154,7 +157,11 @@ def declassifyGetattr(ast, gen, name, scopes, strings):
 	return CallRuntime(Name("get_attr"), [declassify(ast.expr, gen, name, scopes, strings), Const(ast.attrname)])
 
 def declassify(ast, gen, name, scopes, strings):
-	print "declassify:",ast
+	#print "declassify:",ast
+	#This str check is likely hacky. declassifyLambda's argnames can be strings
+	#and can therefore pass a string into here at line 120. 
+	if isinstance(ast, str):
+		return ast
 	return {
 		Module:    declassifyModule,
 		Stmt:      declassifyStmt,
