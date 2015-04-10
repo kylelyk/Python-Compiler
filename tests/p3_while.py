@@ -5,6 +5,8 @@ def mult(x, y):
 	while i != y:
 		acc = acc + x
 		i = i + 1
+		notused2 = 0
+	notused2 = notused
 	notused = 10
 	return acc
 
@@ -36,5 +38,5 @@ def exp(b, e):
 	
 	return acc
 
-#print mult(6, 9)
+print mult(6, 9)
 print exp(5, 3)

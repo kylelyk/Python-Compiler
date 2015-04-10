@@ -4,14 +4,11 @@ import astpp
 
 #helper to combine the 2-tuple's innards
 def combine(first, second):
-	#print "first:",first
-	#print "second:",second
 	f1, f2 = first
 	s1, s2 = second
 	return (f1 | s1, f2 | s2)
 
 def varsModule(ast):
-	astpp.printAst(ast)
 	#need to do disjunct with free and written_to?
 	return getVars(ast.node)
 
@@ -38,7 +35,6 @@ def varsAssign(ast):
 	if isinstance(ast.nodes[0], Subscript):
 		return combine(getVars(ast.nodes[0]), getVars(ast.expr))
 	else:
-		astpp.printAst(ast)
 		return combine(getVars(ast.nodes[0]), getVars(ast.expr))
 
 def varsName(ast):
@@ -126,7 +122,6 @@ def varsThrowError(ast):
 #Returns a tuple of: set of all variables written to, set of all variables read from
 #In the current scope only and does not recurse on functions and lambda's
 def getVars(ast):
-	print ast
 	return {
 		Module:      varsModule,
 		Stmt:        varsStmt,

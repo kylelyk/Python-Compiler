@@ -54,10 +54,6 @@ def closureAssName(ast, gen, lambdaGen):
 	return ast, []
 
 def closureCallFunc(ast, gen, lambdaGen):
-	#Make input() a call to runtime
-	if isinstance(ast.node, Name) and ast.node.name == "input":
-		ast.node.name = "input_int"
-		return closureCallRuntime(ast, gen, lambdaGen)
 	cl = Name(gen.inc().name())
 	funcRef, l1 = closure(ast.node, gen, lambdaGen)
 	a, l2 = iterList(ast.args, gen, lambdaGen)

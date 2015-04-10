@@ -82,5 +82,5 @@ def interfere(asm, liveness, graph):
 			Label:    interferePass,
 			IfStmt:   interfereIfStmt,
 			ModWhile: interfereModWhile
-		}[instr.__class__](instr, liveness[index], graph)
+		}[instr.__class__](instr, liveness[index+1], graph)
 	return graph

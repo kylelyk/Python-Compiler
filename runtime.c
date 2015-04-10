@@ -524,7 +524,7 @@ static pyobj* list_subscript(list ls, pyobj n)
     else if (0 <= ls.len + i && ls.len + i < ls.len)
       return &(ls.data[ls.len + i]);
     else {
-      printf("ERROR: list_nth index larger than list");
+      printf("ERROR: list_nth index %d larger than list", i);
       exit(1);
     }
   }
@@ -533,7 +533,7 @@ static pyobj* list_subscript(list ls, pyobj n)
     if (b < ls.len)
       return &(ls.data[b]);
     else {
-      printf("ERROR: list_nth index larger than list");
+      printf("ERROR: list_nth index %d larger than list", b);
       exit(1);
     }
   }

@@ -28,7 +28,6 @@ def flatConst(ast, newast, gen, map, strings):
 	#Do not inject if its a str constant (for throwing errors and storing)
 	if isinstance(ast.value, str):
 		if ast.value[0] != "$":
-			print "adding:",ast.value
 			strings.add(ast.value)
 		return ast
 	else:

@@ -148,7 +148,6 @@ def heapifyDiscard(ast, names):
 	return Discard(heapify(ast.expr, names))
 
 def heapifyAssign(ast, names):
-	#print ast
 	lhs = ast.nodes[0]
 	if isinstance(lhs, AssName):
 		if lhs.name in names:

@@ -5,7 +5,6 @@ import varAnalysis
 
 #Helper to get new name and add it to names dictionary
 def getNewName(name, gen, names):
-	print "name:",name
 	newName = name + gen.name()
 	names[name] = newName
 	return newName
@@ -14,7 +13,6 @@ def getNewName(name, gen, names):
 #name dictionary
 def addNewVars(ast, gen, names):
 	write, read = varAnalysis.getVars(ast)
-	print "write:",write
 	for name in write:
 		getNewName(name, gen, names)
 
@@ -45,9 +43,10 @@ def uniquifyAssign(ast, gen, names):
 	return Assign([uniquify(ast.nodes[0], gen, names)], uniquify(ast.expr, gen, names))
 
 def uniquifyName(ast, gen, names):
-	print "uniquifyName names:",names
+	if ast.name == "True" or ast.name == "False":
+		return ast
 	#TODO remove this hack
-	if ast.name == "input" or ast.name == "True" or ast.name == "False":
+	if ast.name not in names:
 		return ast
 	return Name(names[ast.name])
 

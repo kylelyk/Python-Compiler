@@ -50,7 +50,6 @@ def explicateName(ast, gen):
 
 def explicateCallFunc(ast, gen):
 	def rec(index, len, args, cont):
-		print "rec called with:", index, len, args
 		if index < len:
 			return Let(args[index][0], args[index][1], rec(index+1, len, args, cont))
 		else:
@@ -60,8 +59,7 @@ def explicateCallFunc(ast, gen):
 	o = Name(gen.inc().name())
 	newFunc = explicate(ast.node, gen)
 	args = [(Name(gen.inc().name()), explicate(arg, gen)) for arg in ast.args]
-	#print "ast.args:", ast.args
-	#print "args:",args
+	
 	return Let(
 		f, 
 		newFunc, 
@@ -95,7 +93,7 @@ def explicateCallFunc(ast, gen):
 						InjectFrom("big", CallRuntime(Name("get_function"), [f])), 
 						[tup[0] for tup in args]
 					),
-					CallFunc(explicate(ast.node, gen), [explicate(arg, gen) for arg in ast.args])
+					CallFunc(f, [arg[0] for arg in args])
 				)
 			)
 		))
@@ -158,7 +156,7 @@ def explicateDict(ast, gen):
 	return Dict([(explicate(k, gen), explicate(v, gen)) for (k, v) in ast.items])
 
 def explicateSubscript(ast, gen):
-	return Subscript(ast.expr, None, [explicate(sub, gen) for sub in ast.subs])
+	return Subscript(explicate(ast.expr, gen), None, [explicate(ast.subs[0], gen)])
 
 def explicateIfExp(ast, gen):
 	test = explicate(ast.test, gen)

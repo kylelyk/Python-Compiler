@@ -185,6 +185,7 @@ debugMsg2:
 		s += '''%s:
 .asciz "%s"
 ''' % (a, a)
+	#s += "program:\n.asciz \""+open(sys.argv[1]).read().replace("\n","; ")+"\"\n\n"
 	s += "\n.text\n"
 	return s
 
@@ -213,8 +214,7 @@ def compile(ast):
 	state = ()
 	strings = set()
 	printd(separator("Declassify Pass"))
-	declassify.declassify(ast, gen, None, None, strings)
-	#astpp.printAst(ast)
+	declassify.declassify(ast, gen, None, strings)
 	printd(separator("Uniquify Pass"))
 	uniquify.uniquify(ast, GenSym("$"), {})
 	printd(separator("Explicate Pass"))
@@ -226,10 +226,9 @@ def compile(ast):
 	ast = closure.closure(ast, gen, GenSym("$lambda"))
 	printd(separator("Flatten Pass"))
 	newast = flattener.runFlatten(ast, gen, map, strings)
-	#print strings
-	for n, a in ast:
-		#print "\n\n",n,"= ",astpp.printAst(a)
-		continue
+	#for n, a in ast:
+	#	print "\n\n",n,"= ",astpp.printAst(a)
+	
 	printd(separator("Instruction Selection Pass"))
 	asm = []
 	pyToAsm(newast, asm, map)
@@ -239,6 +238,10 @@ def compile(ast):
 		newasm.append((n, a, {}, alloc, []))
 		for instr in a:
 			printd(instr)
+	
+	#newasm[-1][1].insert(3, Addl(const1=4,reg2="%esp"))
+	#newasm[-1][1].insert(3, Call(reg="puts"))
+	#newasm[-1][1].insert(3, Pushl(const="program"))
 	
 	printd(separator("Looping Algorithms"))
 	asm = newasm
@@ -288,5 +291,6 @@ if len(sys.argv) != 2:
 	print "Name of file is required"
 	sys.exit(1)
 
+#sys.stderr.write(open(sys.argv[1]).read()+"\n\n")
 ast = compiler.parseFile(sys.argv[1])
 compile(ast)
