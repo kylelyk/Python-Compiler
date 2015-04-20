@@ -1,8 +1,6 @@
 #Modify the input file to make cases pass or fail:
 #1 for pass, 0 for fail.
 
-class test_class:
-	x = 5
 
 int a = 4 if input() else false
 bool b = true if input() else 8
@@ -16,4 +14,3 @@ print(b)
 print(l[1])
 print(d[2])
 print(f(7))
-#print(c.x)
