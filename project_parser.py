@@ -1,19 +1,35 @@
 # Lexer
-tokens = ['ASSIGN','LEFTPARAN','RIGHTPARAN','INT','NAME','PLUS', 'UNARYSUB', 'LEFTBRACKET', 'RIGHTBRACKET', 'LEFTDICTBRACKET', 'RIGHTDICTBRACKET']
-reserved = {'print' : 'PRINT',
-			'input' : 'INPUT'}
-tokens += reserved.values()
+tokens = ['ASSIGN','LEFTPARAN','RIGHTPARAN','INT','NAME','PLUS', 'UNARYSUB', 'LEFTBRACK', 'RIGHTBRACK', 'LEFTCURL', 'RIGHTCURL', 'COMMA', 'COLON']
 
-t_ASSIGN = r'='
+reserved = {}
+reserved_p0 = {'print' : 'PRINT',
+			'input' : 'INPUT'}
+reserved.update(reserved_p0)
+tokens += reserved_p0.values()
+
+reserved_compare = {'not' : 'NOT',
+			'==' : 'EQUALS',
+			'!=': 'NEQUALS',
+			'and' : 'AND',
+			'or' : 'OR',
+			'is' : 'IS',
+			'if' : 'IF',
+			'else' : 'ELSE'}
+reserved.update(reserved_compare)
+tokens += reserved_compare.values()
+
+
+t_ASSIGN = r'(?<![!=])=(?!=)'
 t_PLUS = r'\+'
 t_UNARYSUB = r'\-'
 t_LEFTPARAN = r'\('
 t_RIGHTPARAN = r'\)'
-t_LEFTBRACKET = r'\['
-t_RIGHTBRACKET = r'\]'
-t_LEFTDICTBRACKET = r'\{'
-t_RIGHTDICTBRACKET = r'\}'
-#t_COMPARE = " !=, ==, is"  
+t_LEFTBRACK = r'\['
+t_RIGHTBRACK = r'\]'
+t_LEFTCURL = r'\{'
+t_RIGHTCURL = r'\}'
+t_COMMA = r'\,'
+t_COLON = r'\:'
 
 t_ignore = ' \t\r'
 t_ignore_COMMENT = r'(\#[^\n]*)'
@@ -45,14 +61,15 @@ def t_error(t):
 	t.lexer.skip(1)
 
 import ply_3_4.lex as lex
-lexer = lex.lex()
 
 # Parser
-from compiler.ast import Module, Stmt, Printnl, Add, Const, Name, Discard, CallFunc, UnarySub, AssName, Assign
+from compiler.ast import Module, Stmt, Printnl, Add, Const, Name, Discard, CallFunc, UnarySub, AssName, Assign, And, Not, IfExp, Compare, Or, List, Dict, Subscript
 precedence = (
 	('nonassoc','PRINT'),
 	('nonassoc','INPUT'),
 	('left','PLUS'),
+	('left', 'COMMA'),
+	('left', 'LEFTBRACK'),
 	('nonassoc','UNARYSUB'),
 	('nonassoc','LEFTPARAN','RIGHTPARAN'),
 	('nonassoc','INT','NAME'),
@@ -76,14 +93,14 @@ def p_mult_statement(t):
 def p_print_statement(t):
 	'statement : PRINT expression'
 	t[0] = [Printnl([t[2]], None)]
+
+def p_sub_assign_statement(t):
+	'statement : expression LEFTBRACK expression RIGHTBRACK ASSIGN expression'
+	t[0] = [Assign([Subscript(t[1], 'OP_ASSIGN', [t[3]])], t[6])]
+
 def p_assign_statement(t):
 	'statement : NAME ASSIGN expression'
 	t[0] = [Assign([AssName(t[1], 'OP_ASSIGN')],t[3])]
-
-def p_assign_subscript_statement(t):
-	'statement : expression LEFTBRACKET expression RIGHTBRACKET ASSIGN expression'
-	t[0] = [Assign([Subscript(t[1], 'OP_ASSIGN', [t[3]])], t[6])]
-
 def p_expression_statement(t):
 	'statement : expression'
 	t[0] = [Discard(t[1])]
@@ -93,6 +110,12 @@ def p_name_expression(t):
 def p_int_expression(t):
 	'expression : INT'
 	t[0] = Const(t[1])
+
+#TODO: Allow nested subscripts (a[0][1])
+def p_sub_expression(t):
+	'expression : expression LEFTBRACK expression RIGHTBRACK'
+	t[0] = Subscript(t[1], 'OP_APPLY', [t[3]])
+
 def p_plus_expression(t):
 	'expression : expression PLUS expression'
 	t[0] = Add((t[1], t[3]))
@@ -102,47 +125,95 @@ def p_neg_expression(t):
 def p_paren_expression(t):
 	'expression : LEFTPARAN expression RIGHTPARAN'
 	t[0] = t[2]
+
+def p_if_expression(t):
+	'expression : expression IF expression ELSE expression'
+	t[0] = IfExp(t[3], t[1], t[5])
+
+def p_not_expression(t):
+	'expression : NOT expression'
+	t[0] = Not(t[2])
+
+def p_and_expression(t):
+	'expression : expression AND expression'
+	t[0] = And([t[1], t[3]])
+
+def p_or_expression(t):
+	'expression : expression OR expression'
+	t[0] = Or([t[1], t[3]])
+
+def p_is_expression(t):
+	'expression : expression IS expression'
+	t[0] = Compare(t[1], [('is', t[3])])
+	
+#TODO: Fix the conflict with the ASSIGN token
+def p_equals_expression(t):
+	'expression : expression EQUALS expression'
+	t[0] = Compare(t[1], [('==',t[3])])
+
 def p_input_expression(t):
 	'expression : INPUT  LEFTPARAN RIGHTPARAN'
 	t[0] = CallFunc(Name('input'),[])
 
-def p_subscript_expression(t):
-	'expression : expression LEFTBRACKET expression RIGHTBRACKET'
-	t[0] = Subscript(t[1], 'OP_APPLY', t[3])
+#SPECIAL CASIN UP IN THIS HIZZLE	
+def p_list_empty(t):
+	'expression : LEFTBRACK RIGHTBRACK'
+	t[0] = List(())
 
-def p_not_expression(t):
-	'expression: not expression'
-	t[0] = Not(t[2])
+def p_list(t):
+	'expression : LEFTBRACK expr_list RIGHTBRACK'
+	if not isinstance(t[2],list):
+		t[0] = List([t[2]])
+	else:
+		t[0] = List(t[2])
 
-def p_or_expression(t):
-	'expression: expression or expression'
-	t[0] = Or([t[1], t[3])
+def p_term_list(t):
+	'expr_list : expression'
+	t[0] = t[1]
 
-def p_and_expression(t):
-	'expression: expression and expression'
-	t[0] = And([t[1], t[3])
-	
-def p_compare_expression(t):
-	'expression: expression COMPARE expression'	
-	t[0] = Compare(t[1], [(t[2], t[3])])
-
-def p_if_single_expression(t):
-	'expression: expression if expression else expression'
-	t[0] = IfExp(t[1], t[3], t[5])
-
-##TODO: Define expr_list and key_datum_list base case behavior
 def p_list_expression(t):
-	'expression: LEFTBRACKET key_datum_list RIGHTBRACKET'
-	t[0] = List([t[2]]) 
-		#List([element1, element2])
+	'expr_list : expr_list COMMA expression'	
+	if isinstance(t[1], list):
+		t[0] = t[1] + [t[3]]		 
+	else: 
+		t[0] = [t[1]] + [t[3]]
+
+def p_empty_dict(t):
+	'expression : LEFTCURL RIGHTCURL'	
+	t[0] = Dict(())
+	
+def p_dict(t):
+	'expression : LEFTCURL pair_list RIGHTCURL'
+	if not isinstance(t[2],list):
+		t[0] = Dict([t[2]])
+	else:
+		t[0] = Dict(t[2])
+
+def p_pair_base(t):
+	'pair : expression COLON expression'
+	t[0] = (t[1],t[3])
+
+def p_term_dict(t):
+	'pair_list : pair'
+	t[0] = t[1]
 
 def p_dict_expression(t):
-	'expression: LEFTDICTBRACKET expr_list RIGHTDICTBRACKET'
-	t[0] = Dict([t[2]])
+	'pair_list : pair_list COMMA pair'
+	if isinstance(t[1], list):
+		t[0] = t[1] + [t[3]]		 
+	else: 
+		t[0] = [t[1]] + [t[3]]
 	
-
-
 def p_error(t):
 	print "Syntax error at '%s'" % t.value
 import ply_3_4.yacc as yacc
-yacc.yacc()
+
+def parse(code):
+	import ply.lex as lex
+	lex.lex()
+	import ply.yacc as yacc
+	import re
+	parser = yacc.yacc()
+	statements = []
+	statements = parser.parse(code)
+	return statements
