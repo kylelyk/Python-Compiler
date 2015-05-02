@@ -51,8 +51,8 @@ def liveWhile(instr, prev):
 		lCur[2] = liveness(body, lCur[3])[0]
 		lCur[3] = liveness(test, lCur[1])[0]
 		lCur[4] = set(prev)
-		k = 0
 		updated = lCur != lPrev
+	#print lCur
 	instr.liveTest = liveness(test, lCur[1])
 	instr.liveBody = liveness(body, lCur[3])
 	return lCur[0]

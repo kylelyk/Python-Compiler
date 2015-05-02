@@ -4,45 +4,45 @@ import astpp
 import varAnalysis
 
 #Helper to get new name and add it to names dictionary
-def getNewName(name, gen, names):
-	newName = name + gen.name()
+def getNewName(name,gen, names, scopes):
+	newName = name + scopes[-1]
 	names[name] = newName
 	return newName
 
 #Helper that given an ast, will add all write variables to the
 #name dictionary
-def addNewVars(ast, gen, names):
+def addNewVars(ast,gen, names, scopes):
 	write, read = varAnalysis.getVars(ast)
 	for name in write:
-		getNewName(name, gen, names)
+		getNewName(name,gen, names, scopes)
 
-def uniquifyModule(ast, gen, names):
+def uniquifyModule(ast,gen, names, scopes):
 	#go through the top level scope and add the variables to the dictionary
-	addNewVars(ast.node, gen, names)
-	ast.node = uniquify(ast.node, gen, names)
+	addNewVars(ast.node,gen, names, scopes)
+	ast.node = uniquify(ast.node,gen, names, scopes)
 
-def uniquifyStmt(ast, gen, names):
-	return Stmt([uniquify(n, gen, names) for n in ast.nodes])
+def uniquifyStmt(ast,gen, names, scopes):
+	return Stmt([uniquify(n,gen, names, scopes) for n in ast.nodes])
 
-def uniquifyPrintnl(ast, gen, names):
-	return Printnl([uniquify(ast.nodes[0], gen, names)], None)
+def uniquifyPrintnl(ast,gen, names, scopes):
+	return Printnl([uniquify(ast.nodes[0],gen, names, scopes)], None)
 
-def uniquifyConst(ast, gen, names):
+def uniquifyConst(ast,gen, names, scopes):
 	return ast
 
-def uniquifyUnarySub(ast, gen, names):
-	return UnarySub(uniquify(ast.expr, gen, names))
+def uniquifyUnarySub(ast,gen, names, scopes):
+	return UnarySub(uniquify(ast.expr,gen, names, scopes))
 
-def uniquifyAdd(ast, gen, names):
-	return Add([uniquify(ast.left, gen, names), uniquify(ast.right, gen, names)])
+def uniquifyAdd(ast,gen, names, scopes):
+	return Add([uniquify(ast.left,gen, names, scopes), uniquify(ast.right,gen, names, scopes)])
 
-def uniquifyDiscard(ast, gen, names):
-	return Discard(uniquify(ast.expr, gen, names))
+def uniquifyDiscard(ast,gen, names, scopes):
+	return Discard(uniquify(ast.expr,gen, names, scopes))
 
-def uniquifyAssign(ast, gen, names):
-	return Assign([uniquify(ast.nodes[0], gen, names)], uniquify(ast.expr, gen, names))
+def uniquifyAssign(ast,gen, names, scopes):
+	return Assign([uniquify(ast.nodes[0],gen, names, scopes)], uniquify(ast.expr,gen, names, scopes))
 
-def uniquifyName(ast, gen, names):
+def uniquifyName(ast,gen, names, scopes):
 	if ast.name == "True" or ast.name == "False":
 		return ast
 	#TODO remove this hack
@@ -50,94 +50,95 @@ def uniquifyName(ast, gen, names):
 		return ast
 	return Name(names[ast.name])
 
-def uniquifyAssName(ast, gen, names):
+def uniquifyAssName(ast,gen, names, scopes):
 	return AssName(names[ast.name], ast.flags)
 
-def uniquifyCallFunc(ast, gen, names):
-	return CallFunc(uniquify(ast.node, gen, names), [uniquify(arg, gen, names) for arg in ast.args])
+def uniquifyCallFunc(ast,gen, names, scopes):
+	return CallFunc(uniquify(ast.node,gen, names, scopes), [uniquify(arg,gen, names, scopes) for arg in ast.args])
 
-def uniquifyCallRuntime(ast, gen, names):
-	return CallRuntime(ast.node, [uniquify(arg, gen, names) for arg in ast.args])
+def uniquifyCallRuntime(ast,gen, names, scopes):
+	return CallRuntime(ast.node, [uniquify(arg,gen, names, scopes) for arg in ast.args])
 
-def uniquifyCompare(ast, gen, names):
-	return Compare(uniquify(ast.expr, gen, names), [(ast.ops[0][0], uniquify(ast.ops[0][1], gen, names))])
+def uniquifyCompare(ast,gen, names, scopes):
+	return Compare(uniquify(ast.expr,gen, names, scopes), [(ast.ops[0][0], uniquify(ast.ops[0][1],gen, names, scopes))])
 
-def uniquifyOr(ast, gen, names):
-	return Or([uniquify(ast.nodes[0], gen, names),uniquify(ast.nodes[1], gen, names)])
+def uniquifyOr(ast,gen, names, scopes):
+	return Or([uniquify(ast.nodes[0],gen, names, scopes),uniquify(ast.nodes[1],gen, names, scopes)])
 
-def uniquifyAnd(ast, gen, names):
-	return And([uniquify(ast.nodes[0], gen, names),uniquify(ast.nodes[1], gen, names)])
+def uniquifyAnd(ast,gen, names, scopes):
+	return And([uniquify(ast.nodes[0],gen, names, scopes),uniquify(ast.nodes[1],gen, names, scopes)])
 
-def uniquifyNot(ast, gen, names):
-	return Not(uniquify(ast.expr, gen, names))
+def uniquifyNot(ast,gen, names, scopes):
+	return Not(uniquify(ast.expr,gen, names, scopes))
 
-def uniquifyList(ast, gen, names):
-	return List([uniquify(n, gen, names) for n in ast.nodes])
+def uniquifyList(ast,gen, names, scopes):
+	return List([uniquify(n,gen, names, scopes) for n in ast.nodes])
 
-def uniquifyDict(ast, gen, names):
-	return Dict([(uniquify(k, gen, names), uniquify(v, gen, names)) for (k, v) in ast.items])
+def uniquifyDict(ast,gen, names, scopes):
+	return Dict([(uniquify(k,gen, names, scopes), uniquify(v,gen, names, scopes)) for (k, v) in ast.items])
 
-def uniquifySubscript(ast, gen, names):
-	return Subscript(uniquify(ast.expr, gen, names), ast.flags, [uniquify(sub, gen, names) for sub in ast.subs])
+def uniquifySubscript(ast,gen, names, scopes):
+	return Subscript(uniquify(ast.expr,gen, names, scopes), ast.flags, [uniquify(sub,gen, names, scopes) for sub in ast.subs])
 
-def uniquifyIfExp(ast, gen, names):
+def uniquifyIfExp(ast,gen, names, scopes):
 	return IfExp(
-		uniquify(ast.test, gen, names),
-		uniquify(ast.then, gen, names),
-		uniquify(ast.else_, gen, names)
+		uniquify(ast.test,gen, names, scopes),
+		uniquify(ast.then,gen, names, scopes),
+		uniquify(ast.else_,gen, names, scopes)
 	)
 
-def uniquifyIf(ast, gen, names):
+def uniquifyIf(ast,gen, names, scopes):
 	return If(
-		[(uniquify(ast.tests[0][0], gen, names),
-		uniquify(ast.tests[0][1], gen, names))],
-		uniquify(ast.else_, gen, names)
+		[(uniquify(ast.tests[0][0],gen, names, scopes),
+		uniquify(ast.tests[0][1],gen, names, scopes))],
+		uniquify(ast.else_,gen, names, scopes)
 	)
 
-def uniquifyFunction(ast, gen, names):
+def uniquifyFunction(ast,gen, names, scopes):
 	#Transform into "var = lambda"
 	return uniquify(Assign(
 	[AssName(ast.name, 'OP_ASSIGN')],
 		Lambda(ast.argnames, ast.defaults, ast.flags, ast.code)
-	), gen, names)
+	),gen, names, scopes)
 
-def uniquifyLambda(ast, gen, names):
+def uniquifyLambda(ast,gen, names, scopes):
 	#Modify lambda's so that they can hold multiple stmts and a final return
 	if not isinstance(ast.code, Stmt):
 		ast.code = Stmt([Return(ast.code)])
 	#rename args
-	gen.inc()
+	scopes.append(gen.inc().name())
+	print "scopes:",scopes
 	newDict = names.copy()
-	funcArgs = [getNewName(arg, gen, newDict) for arg in ast.argnames]
+	funcArgs = [getNewName(arg, gen, newDict, scopes) for arg in ast.argnames]
 	#Figure out which variables are in the scope of the body
 	#and modify the dict to reflect that change
-	addNewVars(ast.code, gen, newDict)
+	addNewVars(ast.code, gen, newDict, scopes)
 	#recurse with new dictionary
-	funcCode = uniquify(ast.code, gen, newDict)
-	gen.dec()
+	scopes.pop()
+	funcCode = uniquify(ast.code, gen, newDict, scopes)
 	return Lambda(funcArgs, ast.defaults, ast.flags, funcCode)
 
-def uniquifyReturn(ast, gen, names):
-	return Return(uniquify(ast.value, gen, names))
+def uniquifyReturn(ast,gen, names, scopes):
+	return Return(uniquify(ast.value,gen, names, scopes))
 
-def uniquifyWhile(ast, gen, names):
-	return While(uniquify(ast.test, gen, names), uniquify(ast.body, gen, names), None)
+def uniquifyWhile(ast,gen, names, scopes):
+	return While(uniquify(ast.test,gen, names, scopes), uniquify(ast.body,gen, names, scopes), None)
 
-def uniquifyAssAttr(ast, gen, names):
-	return AssAttr(uniquify(ast.expr, gen, names), names[ast.attrname], ast.flags)
+def uniquifyAssAttr(ast,gen, names, scopes):
+	return AssAttr(uniquify(ast.expr,gen, names, scopes), names[ast.attrname], ast.flags)
 
-def uniquifyGetattr(ast, gen, names):
-	return Getattr(uniquify(ast.expr, gen, names), names[ast.attrname])
+def uniquifyGetattr(ast,gen, names, scopes):
+	return Getattr(uniquify(ast.expr,gen, names, scopes), names[ast.attrname])
 
-def uniquifyInjectFrom(ast, gen, names):
-	return InjectFrom(ast.typ, uniquify(ast.arg, gen, names))
+def uniquifyInjectFrom(ast,gen, names, scopes):
+	return InjectFrom(ast.typ, uniquify(ast.arg,gen, names, scopes))
 
-def uniquifyLet(ast, gen, names):
-	return Let(uniquify(ast.var, gen, names), uniquify(ast.rhs, gen, names), uniquify(ast.body, gen, names))
+def uniquifyLet(ast,gen, names, scopes):
+	return Let(uniquify(ast.var,gen, names, scopes), uniquify(ast.rhs,gen, names, scopes), uniquify(ast.body,gen, names, scopes))
 
 #names is a dictionary which keeps track of all variables seen
 #so far and what they should be renamed to
-def uniquify(ast, gen, names):
+def uniquify(ast,gen, names, scopes):
 	return {
 		Module:      uniquifyModule,
 		Stmt:        uniquifyStmt,
@@ -168,4 +169,4 @@ def uniquify(ast, gen, names):
 		#Getattr:     uniquifyGetattr,
 		InjectFrom:  uniquifyInjectFrom,
 		Let:         uniquifyLet
-	}[ast.__class__](ast, gen, names)
+	}[ast.__class__](ast,gen, names, scopes)

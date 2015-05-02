@@ -96,7 +96,7 @@ def declassifyIf(ast, gen, name, strings):
 	return If(
 		[(declassify(ast.tests[0][0], gen, name, strings),
 		declassify(ast.tests[0][1], gen, name, strings))],
-		declassify(ast.else_, gen, name, strings)
+		declassify(ast.else_, gen, name, strings) if ast.else_ else Stmt([Discard(Const(0))])
 	)
 
 def declassifyFunction(ast, gen, name, strings):

@@ -1,9 +1,10 @@
 import compiler, sys, re, astpp, os
 sys.path.insert(0, 'Project_Parser')
 from compiler.ast import *
+from HelperClasses import *
 from x86AST import *
 from Project_Parser import *
-import declassify, uniquify, heapify, explicate, closure, flattener, liveness, interference, colorGraph, python_yacc
+import python_yacc, declassify, uniquify, analysis, heapify, explicate, closure, flattener, liveness, interference, colorGraph
 
 debug = False
 def printd(str):
@@ -12,23 +13,6 @@ def printd(str):
 
 def separator(name):
 	return "="*80 + "\n"+" "*(40-(len(name)/2)) +name +"\n"+"="*80
-
-class GenSym:
-	def __init__(self, s):
-		self.n = 0
-		self.s = s
-	def inc(self):
-		self.n += 1
-		return self
-	def dec(self):
-		self.n -= 1
-		return self
-	def name(self):
-		return self.s + str(self.n)
-	def get(self):
-		return str(self.n)
-	def invalidName(self):
-		return "__$tmp_invalid"
 
 def needsSpill(instr, colors):
 	spill = [False, False]
@@ -218,10 +202,17 @@ def compile(ast):
 	printd(separator("Declassify Pass"))
 	declassify.declassify(ast, gen, None, strings)
 	printd(separator("Uniquify Pass"))
-	uniquify.uniquify(ast, GenSym("$"), {})
+	gen = GenSym("$")
+	uniquify.uniquify(ast, gen, {}, [gen.name()])
+	astpp.printAst(ast)
+	
+	printd(separator("Analysis Pass"))
+	types = analysis.runAnalysis(ast)
+	print types
+	analysis.printReport(types)#, map)
+	
 	printd(separator("Explicate Pass"))
 	explicate.explicate(ast, gen)
-	#astpp.printAst(ast)
 	printd(separator("Heapify Pass"))
 	heapify.runHeapify(ast)
 	printd(separator("Closure Pass"))

@@ -1,5 +1,22 @@
 from compiler.ast import *
 
+class GenSym:
+	def __init__(self, s):
+		self.n = 0
+		self.s = s
+	def inc(self):
+		self.n += 1
+		return self
+	def dec(self):
+		self.n -= 1
+		return self
+	def name(self):
+		return self.s + str(self.n)
+	def get(self):
+		return str(self.n)
+	def invalidName(self):
+		return "__$tmp_invalid"
+
 #Flattened version of IfExp
 #Is reused for both python ast and asm instructions
 class IfStmt(Node):
