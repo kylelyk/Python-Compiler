@@ -1,7 +1,9 @@
 import compiler, sys, re, astpp, os
+sys.path.insert(0, 'Project_Parser')
 from compiler.ast import *
 from x86AST import *
-import declassify, uniquify, heapify, explicate, closure, flattener, liveness, interference, colorGraph
+from Project_Parser import *
+import declassify, uniquify, heapify, explicate, closure, flattener, liveness, interference, colorGraph, python_yacc
 
 debug = False
 def printd(str):
@@ -291,6 +293,11 @@ if len(sys.argv) != 2:
 	print "Name of file is required"
 	sys.exit(1)
 
-#sys.stderr.write(open(sys.argv[1]).read()+"\n\n")
-ast = compiler.parseFile(sys.argv[1])
+use_project_parser = True
+
+if use_project_parser:
+	text = open(sys.argv[1]).read()
+	ast = python_yacc.parse(text, sys.argv[1])
+else:
+	ast = compiler.parseFile(sys.argv[1])
 compile(ast)
