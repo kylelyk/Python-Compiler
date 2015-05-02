@@ -586,7 +586,7 @@ def p_expr_annotated(p):
 	'''expr_stmt : NAME NAME EQUAL yield_expr
 	             | NAME NAME EQUAL testlist '''
 	#[Assign([AssName(t[1], 'OP_ASSIGN')],t[3])]
-	node = ast.Assign([ast.AssName(p[2],['OP_ASSIGN', p[1].upper()])], p[4])
+	node = ast.Assign([ast.AssName(p[2],['OP_ASSIGN', p[4].lineno, p[1].upper()])], p[4])
 	locate(node,p[4].lineno)
 	p[0] = [node]
 
@@ -629,7 +629,7 @@ _shorthand_name.update({
         })
 def expr_to_assign(term):
     if isinstance(term, ast.Name):
-        x = ast.AssName(term.name, 'OP_ASSIGN')
+        x = ast.AssName(term.name, ['OP_ASSIGN', term.lineno])
         if term.name == "None":
             raise_syntax_error("assignment to None", term)
         locate(x, term.lineno)#, term.span)
@@ -643,11 +643,11 @@ def expr_to_assign(term):
         locate(x, term.lineno)#, term.span)
         return x
     elif isinstance(term, ast.Subscript):
-        x = ast.Subscript(term.expr, 'OP_ASSIGN', term.subs)
+        x = ast.Subscript(term.expr, ['OP_ASSIGN', term.lineno, 'NONE'], term.subs)
         locate(x, term.lineno)#, term.span)
         return x
     elif isinstance(term, ast.Getattr):
-        x = ast.AssAttr(term.expr, term.attrname, 'OP_ASSIGN')
+        x = ast.AssAttr(term.expr, term.attrname, ['OP_ASSIGN', term.lineno])
         locate(x, term.lineno)#, term.span)
         return x
     elif isinstance(term, ast.Slice):
@@ -2524,9 +2524,8 @@ def parse(source, filename="<string>"):
         err.filename = filename
         err.text = text
         raise
-    print "Filename:", filename
-    #misc.set_filename(filename, parse_tree)
-    #syntax.check(parse_tree)
+    misc.set_filename(filename, parse_tree)
+    syntax.check(parse_tree)
     return parse_tree
 
 
