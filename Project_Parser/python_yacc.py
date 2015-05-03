@@ -629,7 +629,7 @@ _shorthand_name.update({
         })
 def expr_to_assign(term):
     if isinstance(term, ast.Name):
-        x = ast.AssName(term.name, ['OP_ASSIGN', term.lineno])
+        x = ast.AssName(term.name, ['OP_ASSIGN', term.lineno, 'NONE'])
         if term.name == "None":
             raise_syntax_error("assignment to None", term)
         locate(x, term.lineno)#, term.span)
