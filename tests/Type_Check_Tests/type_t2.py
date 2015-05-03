@@ -1,4 +1,4 @@
-int a = (3 if input() else false)
+int a = (3 if input() else False)
 print a
 
 #AST:
