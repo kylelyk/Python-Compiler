@@ -259,8 +259,8 @@ def analyzeDict(ast, graph, consts, gens):
 		for k, v in ast.items:
 			k, k_lbl = analyze(k, graph, consts, gens)
 			v, v_lbl = analyze(v, graph, consts, gens)
-			addEdge(k, name, graph, "key", k_lbl)
-			addEdge(v, name, graph, "value", v_lbl)
+			addEdge(k, name, graph, k_lbl)
+			addEdge(v, name, graph, v_lbl)
 	return name, None
 
 def analyzeSubscript(ast, graph, consts, gens):
