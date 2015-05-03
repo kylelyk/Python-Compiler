@@ -4,7 +4,7 @@ from compiler.ast import *
 from HelperClasses import *
 from x86AST import *
 from Project_Parser import *
-import python_yacc, declassify, uniquify, analysis, heapify, explicate, closure, flattener, liveness, interference, colorGraph
+import python_yacc, debugInfo, declassify, uniquify, analysis, heapify, explicate, closure, flattener, liveness, interference, colorGraph
 
 debug = False
 def printd(str):
@@ -199,17 +199,29 @@ def compile(ast):
 	map = {}
 	state = ()
 	strings = set()
+	
+	
+	
+	astpp.printAst(ast)
 	printd(separator("Declassify Pass"))
 	declassify.declassify(ast, gen, None, strings)
 	printd(separator("Uniquify Pass"))
-	gen = GenSym("$")
-	uniquify.uniquify(ast, gen, {}, [gen.name()])
+	
+	names = uniquify.runUniquify(ast)
+	#print names
+	#Needs to be done after uniquifying all variables
+	lines = {}
+	types = {}
+	debugInfo.lines(ast, lines)
+	debugInfo.types(ast, types)
+	print lines
+	print types
 	astpp.printAst(ast)
 	
 	printd(separator("Analysis Pass"))
 	types = analysis.runAnalysis(ast)
 	print types
-	analysis.printReport(types)#, map)
+	analysis.printReport(types, names, lines, False)
 	
 	printd(separator("Explicate Pass"))
 	explicate.explicate(ast, gen)

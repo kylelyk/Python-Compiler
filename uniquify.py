@@ -170,3 +170,9 @@ def uniquify(ast,gen, names, scopes):
 		InjectFrom:  uniquifyInjectFrom,
 		Let:         uniquifyLet
 	}[ast.__class__](ast,gen, names, scopes)
+
+def runUniquify(ast):
+	gen = GenSym("$")
+	names = {}
+	uniquify(ast, gen, names, [gen.name()])
+	return names
