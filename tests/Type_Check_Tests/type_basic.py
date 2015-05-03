@@ -2,8 +2,8 @@ int a = 3
 a = 6
 print a
 
-bool b = true
-b = false
+bool b = True
+b = False
 print b
 
 #AST: 
