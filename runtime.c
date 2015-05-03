@@ -71,7 +71,7 @@ static void assert_type(pyobj x, char* type, int lineno = 0){
 			}
 			else{
 				big_pyobj* b = project_big(x);
-				is_type = strcmp(b->tag, LIST);
+				is_type = (b->tag == LIST);
 			}
 			break;
 		}
@@ -81,7 +81,7 @@ static void assert_type(pyobj x, char* type, int lineno = 0){
 			}
 			else{
 				big_pyobj* b = project_big(x);
-				is_type = strcmp(b->tag, DICT);
+				is_type = (b->tag == DICT);
 			}
 			break;
 		}
