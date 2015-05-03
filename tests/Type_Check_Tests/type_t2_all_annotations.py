@@ -2,8 +2,8 @@
 #1 for pass, 0 for fail.
 
 
-int a = 4 if input() else false
-bool b = true if input() else 8
+int a = 4 if input() else False
+bool b = True if input() else 8
 list l = [2,11] if input() else 8
 dict d = {2:6} if input() else 8
 func f = (lambda x: x + 5) if input() else 8
