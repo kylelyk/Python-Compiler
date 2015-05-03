@@ -98,6 +98,7 @@ int is_object(pyobj val);
 int is_class(pyobj val);
 int is_unbound_method(pyobj val);
 int is_bound_method(pyobj val);
+void assert_type(pyobj x, char* type, int lineno)
 
 pyobj inject_int(int i);
 pyobj inject_bool(int b);
