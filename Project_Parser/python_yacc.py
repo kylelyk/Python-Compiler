@@ -234,10 +234,10 @@ def p_decorators_plus_2(p):
 # funcdef: [decorators] 'def' NAME parameters ':' suite
 def p_funcdef_1(p):
     'funcdef : DEF NAME parameters COLON suite'
+    lineno = p.lineno(1)
     docstring, stmt = extract_docstring(p[5])
     node = ast.Function(None, p[2], p[3].argnames, p[3].defaults,
-                        p[3].lineno, docstring, stmt)
-    lineno = p.lineno(1)
+                        lineno, docstring, stmt)
     if BACKWARDS_COMPATIBLE:
         lineno = p.lineno(2)  # XXX which is right?  I like using the "def"
     locate(node, lineno)#, bounds(text_bounds(p, 1), p[5]))
@@ -246,8 +246,9 @@ def p_funcdef_1(p):
 def p_funcdef_2(p):
     'funcdef : decorators DEF NAME parameters COLON suite'
     docstring, stmt = extract_docstring(p[6])
+    lineno = p.lineno(2)
     node = ast.Function(p[1], p[3], p[4].argnames, p[4].defaults,
-                        p[4].lineno, docstring, stmt)
+                        lineno, docstring, stmt)
     # Using the def for the function definition line number
     # Should the span be the entire span, or the span for the function?
     locate(node, p.lineno(2))#, bounds(p[1].span, p[6].span))
