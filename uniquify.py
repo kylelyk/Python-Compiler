@@ -97,7 +97,7 @@ def uniquifyIf(ast,gen, names, scopes):
 def uniquifyFunction(ast,gen, names, scopes):
 	#Transform into "var = lambda"
 	return uniquify(Assign(
-	[AssName(ast.name, 'OP_ASSIGN')],
+	[AssName(ast.name, ['OP_ASSIGN',ast.flags,"NONE"])],
 		Lambda(ast.argnames, ast.defaults, ast.flags, ast.code)
 	),gen, names, scopes)
 

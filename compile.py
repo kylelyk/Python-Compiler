@@ -210,7 +210,7 @@ def compile(ast):
 	names = uniquify.runUniquify(ast)
 	#print names
 	#Needs to be done after uniquifying all variables
-	lines = {}
+	lines = {"True":0,"False":0}
 	types = {}
 	debugInfo.lines(ast, lines)
 	debugInfo.types(ast, types)
