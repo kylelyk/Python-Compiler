@@ -207,7 +207,7 @@ def compile(ast):
 	declassify.declassify(ast, gen, None, strings)
 	printd(separator("Uniquify Pass"))
 	
-	names = uniquify.runUniquify(ast)
+	_, names = uniquify.runUniquify(ast)
 	#print names
 	#Needs to be done after uniquifying all variables
 	lines = {"True":0,"False":0}

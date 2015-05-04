@@ -621,7 +621,7 @@ def simplify(s):
 	return ret
 
 def printReport(types, names, lines, filter):
-	names = {v: k for k, v in names.items()}
+	print "Report:"
 	sys.stdout.write("Variable Name".ljust(20)+"Line".ljust(10)+"Types\n")
 	sys.stdout.write("-"*60+"\n")
 	for name, typeList in types.iteritems():

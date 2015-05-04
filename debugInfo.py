@@ -1,5 +1,7 @@
 from HelperClasses import *
 
+#These passes should only be run after uniquifying
+
 def linesModule(ast, map):
 	lines(ast.node, map)
 
@@ -11,12 +13,14 @@ def linesAssign(ast, map):
 	n = ast.nodes[0]
 	if n.name not in map:
 		map[n.name] = n.flags[1]
+	if isinstance(ast.expr, Lambda):
+		lines(ast.expr, map)
 
 def linesIf(ast, map):
 	lines(ast.tests[0][1], map)
 	lines(ast.else_, map)
 
-def linesFunction(ast, map):
+def linesLambda(ast, map):
 	lines(ast.code, map)
 
 def linesWhile(ast, map):
@@ -31,7 +35,7 @@ def lines(ast, map):
 		Printnl:   passFunc,
 		Discard:   passFunc,
 		If:        linesIf,
-		Function:  linesFunction,
+		Lambda:  linesLambda,
 		Return:    passFunc,
 		While:     linesWhile,
 	}[ast.__class__](ast, map)
@@ -53,7 +57,7 @@ def typesIf(ast, map):
 	types(ast.tests[0][1], map)
 	types(ast.else_, map)
 
-def typesFunction(ast, map):
+def typesLambda(ast, map):
 	types(ast.code, map)
 
 def typesWhile(ast, map):
@@ -68,7 +72,7 @@ def types(ast, map):
 		Printnl:   passFunc,
 		Discard:   passFunc,
 		If:        typesIf,
-		Function:  typesFunction,
+		Lambda:    typesLambda,
 		Return:    passFunc,
 		While:     typesWhile,
 	}[ast.__class__](ast, map)

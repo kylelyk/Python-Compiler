@@ -6,7 +6,8 @@ import varAnalysis
 #Helper to get new name and add it to names dictionary
 def getNewName(name,gen, names, scopes):
 	newName = name + scopes[-1]
-	names[name] = newName
+	names[0][name] = newName
+	names[1][newName] = name
 	return newName
 
 #Helper that given an ast, will add all write variables to the
@@ -46,12 +47,12 @@ def uniquifyName(ast,gen, names, scopes):
 	if ast.name == "True" or ast.name == "False":
 		return ast
 	#TODO remove this hack
-	if ast.name not in names:
+	if ast.name not in names[0]:
 		return ast
-	return Name(names[ast.name])
+	return Name(names[0][ast.name])
 
 def uniquifyAssName(ast,gen, names, scopes):
-	return AssName(names[ast.name], ast.flags)
+	return AssName(names[0][ast.name], ast.flags)
 
 def uniquifyCallFunc(ast,gen, names, scopes):
 	return CallFunc(uniquify(ast.node,gen, names, scopes), [uniquify(arg,gen, names, scopes) for arg in ast.args])
@@ -107,15 +108,15 @@ def uniquifyLambda(ast,gen, names, scopes):
 		ast.code = Stmt([Return(ast.code)])
 	#rename args
 	scopes.append(gen.inc().name())
-	print "scopes:",scopes
-	newDict = names.copy()
-	funcArgs = [getNewName(arg, gen, newDict, scopes) for arg in ast.argnames]
+	#Copy the first mapping so it doesn't persist after the scope is over
+	newDicts = (names[0].copy(), names[1])
+	funcArgs = [getNewName(arg, gen, newDicts, scopes) for arg in ast.argnames]
 	#Figure out which variables are in the scope of the body
 	#and modify the dict to reflect that change
-	addNewVars(ast.code, gen, newDict, scopes)
+	addNewVars(ast.code, gen, newDicts, scopes)
 	#recurse with new dictionary
 	scopes.pop()
-	funcCode = uniquify(ast.code, gen, newDict, scopes)
+	funcCode = uniquify(ast.code, gen, newDicts, scopes)
 	return Lambda(funcArgs, ast.defaults, ast.flags, funcCode)
 
 def uniquifyReturn(ast,gen, names, scopes):
@@ -136,8 +137,8 @@ def uniquifyInjectFrom(ast,gen, names, scopes):
 def uniquifyLet(ast,gen, names, scopes):
 	return Let(uniquify(ast.var,gen, names, scopes), uniquify(ast.rhs,gen, names, scopes), uniquify(ast.body,gen, names, scopes))
 
-#names is a dictionary which keeps track of all variables seen
-#so far and what they should be renamed to
+#names is a 2-tuple of dictionaries which keeps track of all variables seen
+#so far and what they should be renamed to, the renamed variables to their original names
 def uniquify(ast,gen, names, scopes):
 	return {
 		Module:      uniquifyModule,
@@ -173,6 +174,6 @@ def uniquify(ast,gen, names, scopes):
 
 def runUniquify(ast):
 	gen = GenSym("$")
-	names = {}
+	names = ({},{})
 	uniquify(ast, gen, names, [gen.name()])
 	return names
