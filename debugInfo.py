@@ -8,7 +8,9 @@ def linesStmt(ast, map):
 		lines(n, map)
 
 def linesAssign(ast, map):
-	map[ast.nodes[0].name] = ast.nodes[0].flags[1]
+	n = ast.nodes[0]
+	if n.name not in map:
+		map[n.name] = n.flags[1]
 
 def linesIf(ast, map):
 	lines(ast.tests[0][1], map)

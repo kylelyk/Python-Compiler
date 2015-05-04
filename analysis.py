@@ -224,7 +224,7 @@ def analyzeAssign(ast, graph, consts, gens, func):
 	else:
 		#Connect rhs -> lhs
 		addEdge(rhs, lhs.name, graph, lbl)
-		addEdge(lhs.name, rhs, graph, "assign")
+		#addEdge(lhs.name, rhs, graph, "assign")
 
 def analyzeCallFunc(ast, graph, consts, gens, func):
 	node, n_lbl = analyze(ast.node, graph, consts, gens, func)
@@ -274,8 +274,8 @@ def analyzeDict(ast, graph, consts, gens, func):
 		for k, v in ast.items:
 			k, k_lbl = analyze(k, graph, consts, gens, func)
 			v, v_lbl = analyze(v, graph, consts, gens, func)
-			addEdge(k, name, graph, k_lbl)
-			addEdge(v, name, graph, v_lbl)
+			addEdge(k, name, graph, "key")
+			addEdge(v, name, graph, "value")
 	return name, None
 
 def analyzeSubscript(ast, graph, consts, gens, func):
