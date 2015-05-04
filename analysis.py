@@ -71,6 +71,8 @@ class TAny:
 		return hash(self.__class__)
 	def __str__(self):
 		return "TAny"
+	def __repr__(self):
+		return str(self)
 
 class TNone:
 	def __class__(self):
@@ -81,6 +83,8 @@ class TNone:
 		return hash(self.__class__)
 	def __str__(self):
 		return "TNone"
+	def __repr__(self):
+		return str(self)
 
 class TInt:
 	def __class__(self):
@@ -91,6 +95,8 @@ class TInt:
 		return hash(self.__class__)
 	def __str__(self):
 		return "TInt"
+	def __repr__(self):
+		return str(self)
 
 class TBool:
 	def __class__(self):
@@ -101,6 +107,8 @@ class TBool:
 		return hash(self.__class__)
 	def __str__(self):
 		return "TBool"
+	def __repr__(self):
+		return str(self)
 
 class TList:
 	def __init__(self, typ):
@@ -113,6 +121,8 @@ class TList:
 		return hash((self.__class__, self.typ))
 	def __str__(self):
 		return "TList("+str(self.typ)+")"
+	def __repr__(self):
+		return str(self)
 
 class TDict:
 	def __init__(self, ktyp, vtyp):
@@ -126,6 +136,8 @@ class TDict:
 		return hash((self.__class__, self.ktyp, self.vtyp))
 	def __str__(self):
 		return "TDict("+str(self.ktyp)+","+str(self.vtyp)+")"
+	def __repr__(self):
+		return str(self)
 
 class TFunc:
 	def __init__(self, args, ret):
@@ -143,6 +155,8 @@ class TFunc:
 			s += str(a)+","
 		s += str(self.ret)+")"
 		return s
+	def __repr__(self):
+		return str(self)
 
 class TIter:
 	def __init__(self, ktyp, vtyp):
@@ -165,149 +179,156 @@ def addEdge(source, dest, graph, label=None):
 	if dest not in graph:
 		graph[dest] = []
 
-def analyzeStmt(ast, graph, consts, gens):
+def analyzeStmt(ast, graph, consts, gens, func):
 	for n in ast.nodes:
-		analyze(n, graph, consts, gens)
+		analyze(n, graph, consts, gens, func)
 
-def analyzePrintnl(ast, graph, consts, gens):
+def analyzePrintnl(ast, graph, consts, gens, func):
 	return None, None
 
-def analyzeConst(ast, graph, consts, gens):
+def analyzeConst(ast, graph, consts, gens, func):
 	name = gens["const"].inc().name()
 	consts[name] = TInt()
 	return name, None
 
-def analyzeName(ast, graph, consts, gens):
+def analyzeName(ast, graph, consts, gens, func):
 	return ast.name, None
 
-def analyzeUnarySub(ast, graph, consts, gens):
+def analyzeUnarySub(ast, graph, consts, gens, func):
 	name = gens["neg"].inc().name()
-	expr, lbl = analyze(ast.expr, graph, consts, gens)
+	expr, lbl = analyze(ast.expr, graph, consts, gens, func)
 	addEdge(expr, name, graph, lbl)
 	return name, None
 
-def analyzeAdd(ast, graph, consts, gens):
-	rhs, r_lbl = analyze(ast.right, graph, consts, gens)
-	lhs, l_lbl = analyze(ast.left,  graph, consts, gens)
+def analyzeAdd(ast, graph, consts, gens, func):
+	rhs, r_lbl = analyze(ast.right, graph, consts, gens, func)
+	lhs, l_lbl = analyze(ast.left,  graph, consts, gens, func)
 	name = gens["add"].inc().name()
 	addEdge(rhs, name, graph, r_lbl)
 	addEdge(lhs, name, graph, l_lbl)
 	return name, None
 
-def analyzeDiscard(ast, graph, consts, gens):
+def analyzeDiscard(ast, graph, consts, gens, func):
 	#TODO check if correct
-	analyze(ast.expr, graph, consts, gens)
+	analyze(ast.expr, graph, consts, gens, func)
 	return None, None
 
-def analyzeAssName(ast, graph, consts, gens):
+def analyzeAssName(ast, graph, consts, gens, func):
 	raise NotImplementedError
 
-def analyzeAssign(ast, graph, consts, gens):
-	rhs, lbl = analyze(ast.expr, graph, consts, gens)
+def analyzeAssign(ast, graph, consts, gens, func):
+	rhs, lbl = analyze(ast.expr, graph, consts, gens, func)
 	lhs = ast.nodes[0]
 	if isinstance(lhs, Subscript):
 		raise NotImplementedError
 	else:
 		#Connect rhs -> lhs
 		addEdge(rhs, lhs.name, graph, lbl)
+		addEdge(lhs.name, rhs, graph, "assign")
 
-def analyzeCallFunc(ast, graph, consts, gens):
-	node, n_lbl = analyze(ast.node, graph, consts, gens)
+def analyzeCallFunc(ast, graph, consts, gens, func):
+	node, n_lbl = analyze(ast.node, graph, consts, gens, func)
 	for i, arg in enumerate(ast.args):
-		arg, lbl = analyze(arg, graph, consts, gens)
+		arg, lbl = analyze(arg, graph, consts, gens, func)
 		addEdge(arg, node, graph, "arg_"+str(i))
 	return node, "return"
 
-def analyzeCallRuntime(ast, graph, consts, gens):
+def analyzeCallRuntime(ast, graph, consts, gens, func):
 	#Assumes it is a call to input
 	return "$Input", None
 
-def analyzeCompare(ast, graph, consts, gens):
+def analyzeCompare(ast, graph, consts, gens, func):
 	return "$Bool", None
 
-def analyzeOr(ast, graph, consts, gens):
+def analyzeOr(ast, graph, consts, gens, func):
 	name = gens["or"].inc().name()
-	rhs, r_lbl = analyze(ast.nodes[0], graph, consts, gens)
-	lhs, l_lbl = analyze(ast.nodes[1], graph, consts, gens)
+	rhs, r_lbl = analyze(ast.nodes[0], graph, consts, gens, func)
+	lhs, l_lbl = analyze(ast.nodes[1], graph, consts, gens, func)
 	addEdge(rhs, name, graph, r_lbl)
 	addEdge(lhs, name, graph, l_lbl)
 	return name, None
 
-def analyzeNot(ast, graph, consts, gens):
+def analyzeNot(ast, graph, consts, gens, func):
 	name = gens["not"].inc().name()
-	expr, lbl = analyze(ast.expr, graph, consts, gens)
+	expr, lbl = analyze(ast.expr, graph, consts, gens, func)
 	addEdge(expr, name, graph, lbl)
 	return name, None
 
-def analyzeList(ast, graph, consts, gens):
+def analyzeList(ast, graph, consts, gens, func):
 	if len(ast.nodes) == 0:
 		name = gens["const"].inc().name()
 		consts[name] = TList(TNone())
 	else:
 		name = gens["list"].inc().name()
 		for elm in ast.nodes:
-			elm, lbl = analyze(elm, graph, consts, gens)
+			elm, lbl = analyze(elm, graph, consts, gens, func)
 			addEdge(elm, name, graph, lbl)
 	return name, None
 
-def analyzeDict(ast, graph, consts, gens):
+def analyzeDict(ast, graph, consts, gens, func):
 	if len(ast.items) == 0:
 		name = gens["const"].inc().name()
 		consts[name] = TDict(TNone(), TNone())
 	else:
 		name = gens["dict"].inc().name()
 		for k, v in ast.items:
-			k, k_lbl = analyze(k, graph, consts, gens)
-			v, v_lbl = analyze(v, graph, consts, gens)
-			addEdge(k, name, graph, k_lbl)
-			addEdge(v, name, graph, v_lbl)
+			k, k_lbl = analyze(k, graph, consts, gens, func)
+			v, v_lbl = analyze(v, graph, consts, gens, func)
+			addEdge(k, name, graph, "key", k_lbl)
+			addEdge(v, name, graph, "value", v_lbl)
 	return name, None
 
-def analyzeSubscript(ast, graph, consts, gens):
+def analyzeSubscript(ast, graph, consts, gens, func):
 	if ast.flags == "OP_ASSIGN":
 		raise NotImplementedError
 	else:
 		name = gens["subR"].inc().name()
-		sub, s_lbl = analyze(ast.subs[0], graph, consts, gens)
-		expr, e_lbl = analyze(ast.expr, graph, consts, gens)
+		sub, s_lbl = analyze(ast.subs[0], graph, consts, gens, func)
+		expr, e_lbl = analyze(ast.expr, graph, consts, gens, func)
 		#addEdge(sub, name, graph, "sub")
 		addEdge(expr, name, graph, "source")
 		return name, None
 
-def analyzeIfExp(ast, graph, consts, gens):
+def analyzeIfExp(ast, graph, consts, gens, func):
 	name = gens["or"].inc().name()
-	then, t_lbl = analyze(ast.then, graph, consts, gens)
-	else_, e_lbl = analyze(ast.else_, graph, consts, gens)
+	then, t_lbl = analyze(ast.then, graph, consts, gens, func)
+	else_, e_lbl = analyze(ast.else_, graph, consts, gens, func)
 	addEdge(then, name, graph, t_lbl)
 	addEdge(else_, name, graph, e_lbl)
 	return name, None
 
-def analyzeIf(ast, graph, consts, gens):
+def analyzeIf(ast, graph, consts, gens, func):
 	name = gens["or"].inc().name()
-	analyze(ast.tests[0][1], graph, consts, gens)
-	analyze(ast.else_, graph, consts, gens)
+	analyze(ast.tests[0][1], graph, consts, gens, func)
+	analyze(ast.else_, graph, consts, gens, func)
 	return name, None
 
-def analyzeLambda(ast, graph, consts, gens):
+def analyzeLambda(ast, graph, consts, gens, func):
 	print ast
 	name = gens["lambda"].inc().name()
-	
-	return
+	analyze(ast.code, graph, consts, gens, name)
+	for i, arg in enumerate(ast.argnames):
+		#add an arg edge from every arg to the func type
+		addEdge(arg, name, graph, "arg_"+str(i))
+	return name, None
 
-def analyzeReturn(ast, graph, consts, gens):
+def analyzeReturn(ast, graph, consts, gens, func):
+	#Add a return edge from this type to the parent function type
+	name, lbl = analyze(ast.value, graph, consts, gens, func)
+	addEdge(name, func, graph, "up_return")
+	return name, None
+
+def analyzeWhile(ast, graph, consts, gens, func):
+	return analyze(ast.body, graph, consts, gens, func), None
+
+def analyzeAssAttr(ast, graph, consts, gens, func):
 	raise NotImplementedError
 
-def analyzeWhile(ast, graph, consts, gens):
-	return analyze(ast.body, graph, consts, gens), None
-
-def analyzeAssAttr(ast, graph, consts, gens):
-	raise NotImplementedError
-
-def analyzeGetattr(ast, graph, consts, gens):
+def analyzeGetattr(ast, graph, consts, gens, func):
 	raise NotImplementedError
 
 #Returns the end node of the chain in the constraint graph
-def analyze(ast, graph, consts, gens):
+def analyze(ast, graph, consts, gens, func):
 	return {
 		Stmt:        analyzeStmt,
 		Printnl:     analyzePrintnl,
@@ -334,7 +355,7 @@ def analyze(ast, graph, consts, gens):
 		While:       analyzeWhile,
 		#AssAttr:     analyzeAssAttr,
 		#Getattr:     analyzeGetattr,
-	}[ast.__class__](ast, graph, consts, gens)
+	}[ast.__class__](ast, graph, consts, gens, func)
 
 #Returns a list of tuples: (lambda name, new ast for the lambda)
 def runAnalysis(ast):
@@ -342,20 +363,21 @@ def runAnalysis(ast):
 	constGraph = {}
 	#Name generators for nodes in the graph
 	gens = {
-			"const": GenSym("$Const_"),
-			"add":   GenSym("$Add_"),
-			"neg":   GenSym("$Neg_"),
-			"or":    GenSym("$Or_"),
-			"not":   GenSym("$Not_"),
-			"list":  GenSym("$List_"),
-			"dict":  GenSym("$Dict_"),
-			"subR":  GenSym("$SubR_"),
-			"subW":  GenSym("$SubW_")
+			"const":  GenSym("$Const_"),
+			"add":    GenSym("$Add_"),
+			"neg":    GenSym("$Neg_"),
+			"or":     GenSym("$Or_"),
+			"not":    GenSym("$Not_"),
+			"list":   GenSym("$List_"),
+			"dict":   GenSym("$Dict_"),
+			"lambda": GenSym("$Lambda_"),
+			"subR":   GenSym("$SubR_"),
+			"subW":   GenSym("$SubW_")
 		   }
 	#Mappings from constant names to types
 	constTypes = {"$Bool":TBool(),"True":TBool(),"False":TBool(),"$Input":TInt()}
 	
-	analyze(ast.node, constGraph, constTypes, gens)
+	analyze(ast.node, constGraph, constTypes, gens, None)
 	print constGraph
 	return propagate(constGraph, constTypes)
 
@@ -400,19 +422,14 @@ def getReturns(s):
 			ret.add(t.ret)
 	return ret
 
-def filter(set, type):
+def filter(s, type):
 	ret = set()
-	for t in set:
+	for t in s:
 		if isinstance(t, type):
 			ret.add(t)
 	return ret
 
 def propagate(graph, consts):
-	# print TInt() == TInt()
-	# print TFunc([TInt()],TInt()) == TFunc([TInt()],TInt())
-	# raise NotImplementedError
-
-
 	#Init types dictionary
 	types = {}
 	for k in graph:
@@ -421,7 +438,7 @@ def propagate(graph, consts):
 	#if the type of this node was updated
 	def rec(node, t, label):
 		recurse = False
-		#Node is special so do special operations
+		#Branch on different situations
 		if node[:4] == "$Add":
 			print "add"
 			ints, bools, lists, dicts, funcs = getTypes(t)
@@ -487,11 +504,28 @@ def propagate(graph, consts):
 				print "getvalues:",t
 				recurse = not (types[node] >= t)
 				types[node] |= t
+		#Propagates the return type of the function types
 		elif label and label == "return":
-			print "return label"
+			print "return label found"
+			print t
 			t = getReturns(t)
 			recurse = not (types[node] >= t)
 			types[node] |= t
+		#Propagates the current type to the function types
+		elif label and label == "up_return":
+			print "up_return label found"
+			print t
+			t = set([TFunc((),typ) for typ in t])
+			recurse = not (types[node] >= t)
+			types[node] |= t
+		#Update only function types
+		#elif label and label == "assign":
+		#	print "assign label found"
+		#	print t
+		#	#TODO check if this is sound
+		#	t = filter(t, TFunc)
+		#	recurse = not (types[node] >= t)
+		#	types[node] |= t
 		elif label and label[:3] == "arg":
 			print "arg label"
 			pos = int(label[4:])
@@ -524,7 +558,68 @@ def propagate(graph, consts):
 			for neighbor in graph[constName]:
 				rec(neighbor[0], set([consts[constName]]), neighbor[1])
 	return types
+
+#Simplifies a set of types recursively
+#Returns an array
+def simplify(s):
+	#print s
+	ret = []
+	maxArgs = 0
+	retTFuncArgs = []
+	retTFuncRet = []
+	retTList = []
+	retTDictKey = []
+	retTDictVal = []
+	for t in s:
+		if   isinstance(t, TInt):
+			ret.append(t)
+		elif isinstance(t, TBool):
+			ret.append(t)
+		elif isinstance(t, TList):
+			retTList.append(t.typ)
+		elif isinstance(t, TDict):
+			retTDictKey.append(t.ktyp)
+			retTDictVal.append(t.vtyp)
+		elif isinstance(t, TFunc):
+			funcArgs = len(t.args)
+			if funcArgs > maxArgs:
+				#print "increasing maxArgs"
+				retTFuncArgs.extend([[] for i in range(funcArgs - maxArgs)])
+				maxArgs = funcArgs
+			for i, arg in enumerate(t.args):
+				retTFuncArgs[i].append(arg)
+			#print retTFuncArgs
+			retTFuncRet.append(t.ret)
 	
+	if retTList:
+		retTList = simplify(retTList)
+		ret.append(TList(retTList))
+	
+	if retTDictKey:
+		retTDictKey = simplify(retTDictKey)
+	else:
+		retTDictKey = TNone()
+	if retTDictVal:
+		retTDictVal = simplify(retTDictVal)
+	else:
+		retTDictVal = TNone()
+	if not isinstance(retTDictKey, TNone) and not isinstance(retTDictVal, TNone):
+		ret.append(TDict(retTDictKey, retTDictVal))
+	
+	#print "retTFuncArgs:",retTFuncArgs
+	retTFuncArgs = [(simplify(arg) if arg else TNone()) for arg in retTFuncArgs ]
+	if retTFuncRet:
+		retTFuncRet = simplify(retTFuncRet)
+	else:
+		retTFuncRet = TNone()
+	if retTFuncArgs:
+		ret.append(TFunc(retTFuncArgs, retTFuncRet))
+	#if retTFuncArgs
+	# retTDictKey = simplify(retTDictKey)
+	# retTDictVal = simplify(retTDictVal)
+	#print "returning:",ret
+	return ret
+
 def printReport(types, names, lines, filter):
 	names = {v: k for k, v in names.items()}
 	sys.stdout.write("Variable Name".ljust(20)+"Line".ljust(10)+"Types\n")
@@ -535,16 +630,11 @@ def printReport(types, names, lines, filter):
 		line = str(lines[name]) if name in lines else ""
 		name = names[name] if name in names else name
 		
+		types = simplify(typeList)
+		
 		sys.stdout.write(name.ljust(20)+line.ljust(10))
-		if len(typeList) == 1:
-			sys.stdout.write(str(typeList.pop())+"\n")
-		elif len(typeList) > 1:
-			sys.stdout.write("[ ")
-			for i, t in enumerate(typeList):
-				sys.stdout.write(str(t))
-				if i < len(typeList) - 1:
-					sys.stdout.write(", ")
-			sys.stdout.write(" ]\n")
+		if types:
+			sys.stdout.write(str(types)+"\n")
 		else:
 			sys.stdout.write("\n")
 	sys.stdout.flush()
