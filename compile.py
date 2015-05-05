@@ -218,6 +218,7 @@ def compile(ast):
 	#print "Types:",types
 	#analysis.printReport(types, names, lines, False)
 	assertTypes = {k:v for k,v in typeAnno.iteritems() if not analysis.checkSoundness(typeAnno[k], types[k], names[k], lines[k])}
+	#analysis.printReport(types, names, lines, False)
 	#print "Types that need to have runtime checks:",assertTypes
 	analysis.addAssert(ast, assertTypes)
 	
