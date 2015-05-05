@@ -346,7 +346,7 @@ def runAnalysis(ast):
 	constTypes = {"$Bool":TBool(),"True":TBool(),"False":TBool(),"$Input":TInt()}
 	
 	analyze(ast.node, constGraph, constTypes, gens, None)
-	print constGraph
+	#print constGraph
 	return propagate(constGraph, constTypes)
 
 #Returns whether there any are big types
@@ -529,7 +529,7 @@ def propagate(graph, consts):
 			recurse = not (types[node] >= t)
 			types[node] |= t
 		
-		print "types: ",types,"\n"
+		#print "types: ",types,"\n"
 		if recurse:
 			#print "\nrecursing: ",types,"\n"
 			#print node
@@ -537,8 +537,8 @@ def propagate(graph, consts):
 				#print "recursing on ",name, label, types
 				rec(name, types[node], label)
 				
-	print consts
-	print "types: ",types
+	#print consts
+	#print "types: ",types
 	for constName in consts:
 		#print "constName:", constName," ",consts[constName]
 		#For each constant, recurse on its only neighbor
@@ -669,7 +669,7 @@ def checkSoundness(annoType, inferType, name, line):
 			raise TypeError("Variable '"+name+"' did not have type "+str(annoType([],TNone()))+"; had type "+str(inferType)+" instead.")
 
 	annoType = {"INT" : TInt, "BOOL" : TBool, "LIST" : TList, "DICT" : TDict, "FUNC" : TFunc}[annoType]
-	print annoType, inferType
+	#print annoType, inferType
 	if len(inferType) > 1:
 		for type in inferType:
 			if isinstance(type, annoType):
