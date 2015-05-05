@@ -678,7 +678,8 @@ def addAssertStmt(ast, assert_dict):
 	new_body = []
 	for n in ast.nodes:
 		new_expr = addAssert(n, assert_dict)
-		new_body.append(n)
+		if isinstance(n,Assign):		
+			new_body.append(n)
 		if new_expr:
 			new_body.append(new_expr)
 	return Stmt(new_body)
@@ -692,12 +693,14 @@ def addAssertAssign(ast, assert_dict):
 		return Discard(CallRuntime(Name("assert_type"),[Name(name),Const(assert_dict[name]),Const(ast.nodes[0].flags[1])]))
 
 def addAssertWhile(ast,assert_dict):
-	return addAssert(ast.body, assert_dict)
+	#Parser permits None bodies here, have to check.	
+	else_body = addAssert(ast.else_, assert_dict) if ast.else_ else ast.else_
+	return While(ast.test, addAssert(ast.body, assert_dict), else_body)
 
 def addAssertIf(ast, assert_dict):
-	return IfExp(
-		ast.test,
-		addAssert(ast.then, assert_dict),
+		
+	return If(
+		[ast.tests[0][0],addAssert(ast.tests[0][1],assert_dict)],
 		addAssert(ast.else_, assert_dict)
 	)
 
