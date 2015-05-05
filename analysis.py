@@ -698,9 +698,8 @@ def addAssertWhile(ast,assert_dict):
 	return While(ast.test, addAssert(ast.body, assert_dict), else_body)
 
 def addAssertIf(ast, assert_dict):
-		
 	return If(
-		[ast.tests[0][0],addAssert(ast.tests[0][1],assert_dict)],
+		[(ast.tests[0][0],addAssert(ast.tests[0][1],assert_dict))],
 		addAssert(ast.else_, assert_dict)
 	)
 
@@ -708,7 +707,7 @@ def addAssertLambda(ast, assert_dict):
 	return Lambda(ast.argnames, ast.defaults, ast.flags, addAssert(ast.code, assert_dict))
 
 def addAssert(ast, assert_dict):
-	passFunc = lambda a, ad: None
+	passFunc = lambda a, ad: ast
 	return {
 		Module:      addAssertModule,
 		Stmt:        addAssertStmt,
