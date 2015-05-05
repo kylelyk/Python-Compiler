@@ -691,7 +691,7 @@ def addAssertAssign(ast, assert_dict):
 	if name in assert_dict:
 		return Discard(CallRuntime(Name("assert_type"),[Name(name),Const(assert_dict[name]),Const(ast.nodes[0].flags[1])]))
 
-def addAssertWhile(ast,type_dict,assert_dict):
+def addAssertWhile(ast,assert_dict):
 	return addAssert(ast.body, assert_dict)
 
 def addAssertIf(ast, assert_dict):
