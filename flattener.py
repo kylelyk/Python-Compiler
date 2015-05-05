@@ -146,7 +146,8 @@ def flatDict(ast, newast, gen, map, strings):
 	return dictName
 
 def flatSubscript(ast, newast, gen, map, strings):
-	if ast.flags[0] == "OP_ASSIGN":
+	#flags doesn't neccesarily exist
+	if ast.flags and ast.flags[0] == "OP_ASSIGN":
 		#TODO take out this hack and refactor flatten
 		return Subscript(flatten(ast.expr, newast, gen, map, strings), ast.flags, [flatten(ast.subs[0], newast, gen, map, strings)])
 	else:
