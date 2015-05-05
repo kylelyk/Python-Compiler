@@ -92,7 +92,7 @@ void assert_type(pyobj x, char* type, int lineno){
 	
 	if(!is_type){
 		printf("Type error at line %d. Assigned variable did not have expected type %s.", lineno, type);
-		assert(0);
+		exit(-1);
 	} 
 	
 }

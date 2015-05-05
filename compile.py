@@ -198,7 +198,7 @@ def compile(ast):
 	gen = GenSym("__$tmp")
 	map = {}
 	state = ()
-	strings = set()
+	strings = set(["INT","BOOL","LIST","DICT","FUNC"])
 	
 	
 	
@@ -211,18 +211,21 @@ def compile(ast):
 	#print names
 	#Needs to be done after uniquifying all variables
 	lines = {"True":0,"False":0}
-	types = {}
+	typeAnno = {}
 	debugInfo.lines(ast, lines)
-	debugInfo.types(ast, types)
+	debugInfo.types(ast, typeAnno)
 	print lines
-	print types
+	print typeAnno
 	astpp.printAst(ast)
 	
 	printd(separator("Analysis Pass"))
 	types = analysis.runAnalysis(ast)
+	types = {k:analysis.simplify(v) for k,v in types.iteritems()}
 	print types
 	analysis.printReport(types, names, lines, False)
-	analysis.type_check(ast, types, {})
+	assertTypes = {k:v for k,v in typeAnno.iteritems() if not analysis.checkSoundness(typeAnno[k], types[k], names[k], lines[k])}
+	print "Types that need to have runtime checks:",assertTypes
+	analysis.addAssert(ast, assertTypes)
 	
 	printd(separator("Explicate Pass"))
 	explicate.explicate(ast, gen)

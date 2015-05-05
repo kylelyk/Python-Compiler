@@ -632,108 +632,105 @@ def printReport(types, names, lines, filter):
 		line = str(lines[name]) if name in lines else ""
 		name = names[name] if name in names else name
 		
-		types = simplify(typeList)
-		
 		sys.stdout.write(name.ljust(20)+line.ljust(10))
-		if types:
-			sys.stdout.write(str(types)+"\n")
+		if typeList:
+			sys.stdout.write(str(typeList)+"\n")
 		else:
 			sys.stdout.write("\n")
 	sys.stdout.flush()
 
 
-##Type Check Step
 
-def tcModule(ast,type_dict,assert_dict):
-	new_node, assert_dist = type_check(ast.node, type_dict,assert_dict)
+#Determines if the type is Sound
+#Throws an exception if the type is unsound
+#annoType is a string representation of the type
+def checkSoundness(annoType, inferType, name, line):
+	def error():
+		if annoType == TInt or annoType == TBool or annoType == TNone or annoType == TAny:
+			raise TypeError("Variable '"+name+"' did not have type "+str(annoType())+"; had type "+str(inferType)+" instead.")
+		elif annoType == TList:
+			raise TypeError("Variable '"+name+"' did not have type "+str(annoType(TNone()))+"; had type "+str(inferType)+" instead.")
+		elif annoType == TDict:
+			raise TypeError("Variable '"+name+"' did not have type "+str(annoType(TNone(),TNone()))+"; had type "+str(inferType)+" instead.")
+		else:
+			raise TypeError("Variable '"+name+"' did not have type "+str(annoType([],TNone()))+"; had type "+str(inferType)+" instead.")
+
+	annoType = {"INT" : TInt, "BOOL" : TBool, "LIST" : TList, "DICT" : TDict, "FUNC" : TFunc}[annoType]
+	print annoType, inferType
+	if len(inferType) > 1:
+		for type in inferType:
+			if isinstance(type, annoType):
+				return False
+		error()
+	else:
+		inferType = inferType.pop()
+		if isinstance(inferType, annoType):
+			return True
+		error()
+
+##Add Assertions Step
+
+def addAssertModule(ast, assert_dict):
+	new_node = addAssert(ast.node, assert_dict)
 	ast.node = new_node
 
-def tcStmt(ast, type_dict, assert_dict):
-	new_assert_dict = assert_dict
+def addAssertStmt(ast, assert_dict):
 	new_body = []
 	for n in ast.nodes:
-		new_expr, new_assert_dict = type_check(n,type_dict,new_assert_dict)
-		new_body += new_expr
-	return Stmt(new_body), new_assert_dict	
+		new_expr = addAssert(n, assert_dict)
+		new_body.append(n)
+		if new_expr:
+			new_body.append(new_expr)
+	return Stmt(new_body)
 
-	
-def tcAssign(ast, type_dict, assert_dict):
+def addAssertAssign(ast, assert_dict):
 	if(isinstance(ast.nodes[0], Subscript)):
-		return ast, assert_dict
-	anno_tag = ast.nodes[0].flags[2]
+		return ast
 	name = ast.nodes[0].name
-	#print "Annotation Tag:", anno_tag
-	if anno_tag != 'NONE':
-		assert_dict[name] = anno_tag
-	new_ast = [ast]
+	#Need to add runtime check
 	if name in assert_dict:
-		type_array = getTypes(type_dict[name])
-		type_mapping = {"INT" : 0, "BOOL" : 1, "LIST" : 2, "DICT" : 3, "FUNC" : 4}
-		if (type_array[type_mapping[assert_dict[name]]] == False):
-			raise TypeError
-		
-		possible_type_count = 0
-		for type_val in type_array:
-			if type_val == True:
-				possible_type_count += 1
-		if (possible_type_count > 1):
-			#ADD RUNTIME NODE
-			#Arguments: The py_object, Anno_Tag, the linenumber
-			runtime_node = CallRuntime(Name("assert_type"),[Name(name),Name(assert_dict[name]),Const(ast.nodes[0].flags[1])])
-			new_ast = [ast,runtime_node]
+		return Discard(CallRuntime(Name("assert_type"),[Name(name),Const(assert_dict[name]),Const(ast.nodes[0].flags[1])]))
 
-	return new_ast, assert_dict
-	
-def tcWhile(ast,type_dict,assert_dict):
-	return type_check(ast.body, type_dict,assert_dict)
+def addAssertWhile(ast,type_dict,assert_dict):
+	return addAssert(ast.body, assert_dict)
 
-def tcIf(ast, type_dict, assert_dict):
-	if_ast, if_ass_dict = type_check(ast.tests[0][1], type_dict, assert_dict)
-	else_ast, else_ass_dict = type_check(ast.else_, type_dict, assert_dict)
-	new_ast = IfExp(
-		heapify(ast.test, names),
-		heapify(ast.then, names),
-		heapify(ast.else_, names)
+def addAssertIf(ast, assert_dict):
+	return IfExp(
+		ast.test,
+		addAssert(ast.then, assert_dict),
+		addAssert(ast.else_, assert_dict)
 	)
-	return [new_ast], if_ass_dict + else_ass_dict
 
-def tcLambda(ast, type_dict, assert_dict):
-	#I didn't see this in the analysis
-	return NotImplementedError
+def addAssertLambda(ast, assert_dict):
+	return Lambda(ast.argnames, ast.defaults, ast.flags, addAssert(ast.code, assert_dict))
 
-def tcPass(ast, type_dict, assert_dict):
-	return [ast], assert_dict
-	
-	
-def type_check(ast, type_dict, assert_dict):
+def addAssert(ast, assert_dict):
+	passFunc = lambda a, ad: None
 	return {
-		Module:      tcModule,
-		Stmt:        tcStmt,
-		Printnl:     tcPass,
-		Const:       tcPass,
-		UnarySub:    tcPass,
-		Add:         tcPass,
-		Discard:     tcPass,
-		AssName:     tcPass,
-		Assign:      tcAssign,
-		Name:        tcPass,
-		CallFunc:    tcPass,
-		CallRuntime: tcPass,
-		Compare:     tcPass,
-		Or:          tcPass,
-		And:         tcPass,
-		Not:         tcPass,
-		List:        tcPass,
-		Dict:        tcPass,
-		Subscript:   tcPass,
-		IfExp:       tcPass,
-		If:          tcIf,
-		Lambda:      tcPass,
-		Return:      tcPass,
-		While:       tcWhile,
+		Module:      addAssertModule,
+		Stmt:        addAssertStmt,
+		Printnl:     passFunc,
+		Const:       passFunc,
+		UnarySub:    passFunc,
+		Add:         passFunc,
+		Discard:     passFunc,
+		AssName:     passFunc,
+		Assign:      addAssertAssign,
+		Name:        passFunc,
+		CallFunc:    passFunc,
+		CallRuntime: passFunc,
+		Compare:     passFunc,
+		Or:          passFunc,
+		And:         passFunc,
+		Not:         passFunc,
+		List:        passFunc,
+		Dict:        passFunc,
+		Subscript:   passFunc,
+		IfExp:       passFunc,
+		If:          addAssertIf,
+		Lambda:      passFunc,
+		Return:      passFunc,
+		While:       addAssertWhile,
 		#AssAttr:     analyzeAssAttr,
 		#Getattr:     analyzeGetattr,
-	}[ast.__class__](ast, type_dict, assert_dict)
-
-	
-
+	}[ast.__class__](ast, assert_dict)
