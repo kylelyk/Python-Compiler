@@ -222,6 +222,7 @@ def compile(ast):
 	types = analysis.runAnalysis(ast)
 	print types
 	analysis.printReport(types, names, lines, False)
+	analysis.type_check(ast, types, {})
 	
 	printd(separator("Explicate Pass"))
 	explicate.explicate(ast, gen)
@@ -299,7 +300,8 @@ if len(sys.argv) != 2:
 use_project_parser = True
 
 if use_project_parser:
-	text = open(sys.argv[1]).read()
+	text = open(sys.argv[1]).read()
+
 	ast = python_yacc.parse(text, sys.argv[1])
 else:
 	ast = compiler.parseFile(sys.argv[1])
