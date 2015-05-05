@@ -658,6 +658,8 @@ def tcStmt(ast, type_dict, assert_dict):
 
 	
 def tcAssign(ast, type_dict, assert_dict):
+	if(isinstance(ast.nodes[0], Subscript)):
+		return ast, assert_dict
 	anno_tag = ast.nodes[0].flags[2]
 	name = ast.nodes[0].name
 	#print "Annotation Tag:", anno_tag
