@@ -57,7 +57,7 @@ int is_bound_method(pyobj val) {
 }
 
 static void assert_type(pyobj x, char* type, int lineno = 0){
-	int is_type = 1;
+	assert(0);
 	/*switch(type){
 		case "INT":
 			is_type = is_int(x);
