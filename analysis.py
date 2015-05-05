@@ -446,7 +446,7 @@ def propagate(graph, consts):
 				if anyBig(t):
 					tany = TAny()
 					recurse = tany not in types[node]
-					types[node] = tany
+					types[node] = [tany]
 				else:
 					tint = TInt()
 					recurse = tint not in types[node]
