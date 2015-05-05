@@ -676,6 +676,7 @@ def tcAssign(ast, type_dict, assert_dict):
 				possible_type_count += 1
 		if (possible_type_count > 1):
 			#ADD RUNTIME NODE
+			#Arguments: The py_object, Anno_Tag, the linenumber
 			runtime_node = CallRuntime(Name("assert_type"),[Name(name),Name(assert_dict[name]),Const(ast.nodes[0].flags[1])])
 			new_ast = [ast,runtime_node]
 
