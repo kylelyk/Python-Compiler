@@ -208,6 +208,7 @@ def compile(ast):
 	printd(separator("Uniquify Pass"))
 	
 	_, names = uniquify.runUniquify(ast)
+	printd(separator("Analysis Pass"))
 	#print names
 	#Needs to be done after uniquifying all variables
 	lines = {"True":0,"False":0}
@@ -218,10 +219,9 @@ def compile(ast):
 	print typeAnno
 	astpp.printAst(ast)
 	
-	printd(separator("Analysis Pass"))
 	types = analysis.runAnalysis(ast)
 	types = {k:analysis.simplify(v) for k,v in types.iteritems()}
-	print types
+	print "Types:",types
 	analysis.printReport(types, names, lines, False)
 	assertTypes = {k:v for k,v in typeAnno.iteritems() if not analysis.checkSoundness(typeAnno[k], types[k], names[k], lines[k])}
 	print "Types that need to have runtime checks:",assertTypes
@@ -233,9 +233,11 @@ def compile(ast):
 	heapify.runHeapify(ast)
 	printd(separator("Closure Pass"))
 	ast = closure.closure(ast, gen, GenSym("$lambda"))
+	#for n, a in ast:
+	#	print "\n\n",n,"= ",astpp.printAst(a)
 	printd(separator("Flatten Pass"))
 	newast = flattener.runFlatten(ast, gen, map, strings)
-	#for n, a in ast:
+	#for n, a in newast:
 	#	print "\n\n",n,"= ",astpp.printAst(a)
 	
 	printd(separator("Instruction Selection Pass"))
@@ -303,7 +305,8 @@ if len(sys.argv) != 2:
 use_project_parser = True
 
 if use_project_parser:
-	text = open(sys.argv[1]).read()
+	#Workaround for buggy parser
+	text = open(sys.argv[1]).read()+"\n"
 
 	ast = python_yacc.parse(text, sys.argv[1])
 else:

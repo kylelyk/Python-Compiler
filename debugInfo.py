@@ -11,10 +11,11 @@ def linesStmt(ast, map):
 
 def linesAssign(ast, map):
 	n = ast.nodes[0]
-	if n.name not in map:
-		map[n.name] = n.flags[1]
-	if isinstance(ast.expr, Lambda):
-		lines(ast.expr, map)
+	if not isinstance(n, Subscript):
+		if n.name not in map:
+			map[n.name] = n.flags[1]
+		if isinstance(ast.expr, Lambda):
+			lines(ast.expr, map)
 
 def linesIf(ast, map):
 	lines(ast.tests[0][1], map)

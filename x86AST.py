@@ -168,6 +168,7 @@ def moveInto(node, reg, asm, map):
 	if isinstance(node, Const):
 		asm.append(Movl(const1=node.value, reg2=reg, comment=str(node.value)+" -> "+reg))
 	else:
+		print reg
 		asm.append(Movl(reg1=node.name, reg2=reg, comment=node.name+" -> "+reg))
 
 def addInstr2(arg1, arg2, instr, asm, commentFunc):

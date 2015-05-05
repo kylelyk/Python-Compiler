@@ -5,6 +5,8 @@ from HelperClasses import *
 debug = False
 
 def addAssign(node, newast, gen, map, strings, name = None):
+	if isinstance(name, Name):
+		raise TypeError
 	if not name:
 		name = gen.inc().name()
 		map[name] = len(map)
@@ -144,7 +146,7 @@ def flatDict(ast, newast, gen, map, strings):
 	return dictName
 
 def flatSubscript(ast, newast, gen, map, strings):
-	if ast.flags == "OP_ASSIGN":
+	if ast.flags[0] == "OP_ASSIGN":
 		#TODO take out this hack and refactor flatten
 		return Subscript(flatten(ast.expr, newast, gen, map, strings), ast.flags, [flatten(ast.subs[0], newast, gen, map, strings)])
 	else:
