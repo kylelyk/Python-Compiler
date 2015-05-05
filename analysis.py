@@ -534,8 +534,10 @@ def propagate(graph, consts):
 			types[node] |= t
 		#Simply add the types
 		elif t != types[node]:
-			print "simple case"
-			print t
+			debug = False
+			if debug:			
+				print "simple case"
+				print t
 			recurse = not (types[node] >= t)
 			types[node] |= t
 		
@@ -638,3 +640,97 @@ def printReport(types, names, lines, filter):
 		else:
 			sys.stdout.write("\n")
 	sys.stdout.flush()
+
+
+##Type Check Step
+
+def tcModule(ast,type_dict,assert_dict):
+	new_node, assert_dist = type_check(ast.node, type_dict,assert_dict)
+	ast.node = new_node
+
+def tcStmt(ast, type_dict, assert_dict):
+	new_assert_dict = assert_dict
+	new_body = []
+	for n in ast.nodes:
+		new_expr, new_assert_dict = type_check(n,type_dict,new_assert_dict)
+		new_body += new_expr
+	return Stmt(new_body), new_assert_dict	
+
+	
+def tcAssign(ast, type_dict, assert_dict):
+	anno_tag = ast.nodes[0].flags[2]
+	name = ast.nodes[0].name
+	#print "Annotation Tag:", anno_tag
+	if anno_tag != 'NONE':
+		assert_dict[name] = anno_tag
+	new_ast = [ast]
+	if name in assert_dict:
+		type_array = getTypes(type_dict[name])
+		type_mapping = {"INT" : 0, "BOOL" : 1, "LIST" : 2, "DICT" : 3, "FUNC" : 4}
+		if (type_array[type_mapping[assert_dict[name]]] == False):
+			raise TypeError
+		
+		possible_type_count = 0
+		for type_val in type_array:
+			if type_val == True:
+				possible_type_count += 1
+		if (possible_type_count > 1):
+			#ADD RUNTIME NODE
+			runtime_node = CallRuntime(Name("assert_type"),[Name(name),Name(assert_dict[name]),Const(ast.nodes[0].flags[1])])
+			new_ast = [ast,runtime_node]
+
+	return new_ast, assert_dict
+	
+def tcWhile(ast,type_dict,assert_dict):
+	return type_check(ast.body, type_dict,assert_dict)
+
+def tcIf(ast, type_dict, assert_dict):
+	if_ast, if_ass_dict = type_check(ast.tests[0][1], type_dict, assert_dict)
+	else_ast, else_ass_dict = type_check(ast.else_, type_dict, assert_dict)
+	new_ast = IfExp(
+		heapify(ast.test, names),
+		heapify(ast.then, names),
+		heapify(ast.else_, names)
+	)
+	return [new_ast], if_ass_dict + else_ass_dict
+
+def tcLambda(ast, type_dict, assert_dict):
+	#I didn't see this in the analysis
+	return NotImplementedError
+
+def tcPass(ast, type_dict, assert_dict):
+	return [ast], assert_dict
+	
+	
+def type_check(ast, type_dict, assert_dict):
+	return {
+		Module:      tcModule,
+		Stmt:        tcStmt,
+		Printnl:     tcPass,
+		Const:       tcPass,
+		UnarySub:    tcPass,
+		Add:         tcPass,
+		Discard:     tcPass,
+		AssName:     tcPass,
+		Assign:      tcAssign,
+		Name:        tcPass,
+		CallFunc:    tcPass,
+		CallRuntime: tcPass,
+		Compare:     tcPass,
+		Or:          tcPass,
+		And:         tcPass,
+		Not:         tcPass,
+		List:        tcPass,
+		Dict:        tcPass,
+		Subscript:   tcPass,
+		IfExp:       tcPass,
+		If:          tcIf,
+		Lambda:      tcPass,
+		Return:      tcPass,
+		While:       tcWhile,
+		#AssAttr:     analyzeAssAttr,
+		#Getattr:     analyzeGetattr,
+	}[ast.__class__](ast, type_dict, assert_dict)
+
+	
+
