@@ -200,9 +200,6 @@ def compile(ast):
 	state = ()
 	strings = set(["INT","BOOL","LIST","DICT","FUNC"])
 	
-	
-	
-	astpp.printAst(ast)
 	printd(separator("Declassify Pass"))
 	declassify.declassify(ast, gen, None, strings)
 	printd(separator("Uniquify Pass"))

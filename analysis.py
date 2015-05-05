@@ -192,7 +192,7 @@ def analyzeAssign(ast, graph, consts, gens, func):
 	else:
 		#Connect rhs -> lhs
 		addEdge(rhs, lhs.name, graph, r_lbl)
-		#addEdge(lhs.name, rhs, graph, "assign")
+		addEdge(lhs.name, rhs, graph)#, "assign")
 
 def analyzeCallFunc(ast, graph, consts, gens, func):
 	node, n_lbl = analyze(ast.node, graph, consts, gens, func)
@@ -271,12 +271,13 @@ def analyzeIf(ast, graph, consts, gens, func):
 	return name, None
 
 def analyzeLambda(ast, graph, consts, gens, func):
-	print ast
 	name = gens["lambda"].inc().name()
 	analyze(ast.code, graph, consts, gens, name)
 	for i, arg in enumerate(ast.argnames):
 		#add an arg edge from every arg to the func type
 		addEdge(arg, name, graph, "arg_"+str(i))
+		#add an up_arg edge from the func type to every arg
+		addEdge(name, arg, graph, "up_arg_"+str(i))
 	return name, None
 
 def analyzeReturn(ast, graph, consts, gens, func):
@@ -346,7 +347,7 @@ def runAnalysis(ast):
 	
 	analyze(ast.node, constGraph, constTypes, gens, None)
 	print constGraph
-	return propagate(constGraph, constTypes)
+	propagate(constGraph, constTypes)
 
 #Returns whether there any are big types
 def anyBig(set):
@@ -380,6 +381,14 @@ def getValues(s):
 			ret.add(t.vtyp)
 		elif isinstance(t, TList):
 			ret.add(t.typ)
+	return ret
+
+#Returns the set of types that are the nth function parameter of all function types
+def getParam(s, n):
+	ret = set()
+	for t in s:
+		if isinstance(t, TFunc) and len(t.args) > n:
+			ret.add(t.args[n])
 	return ret
 
 def getReturns(s):
@@ -476,14 +485,14 @@ def propagate(graph, consts):
 				t = set([TIter(TNone(),typ) for typ in t])
 				recurse = not (types[node] >= t)
 				types[node] |= t
-			#Propagates the return type of the function types
+			#Propagates the return types of the function types
 			elif label == "return":
 				print "return label found"
 				print t
 				t = getReturns(t)
 				recurse = not (types[node] >= t)
 				types[node] |= t
-			#Propagates the current type to the function types
+			#Propagates the current types to the function types
 			elif label == "up_return":
 				print "up_return label found"
 				print t
@@ -497,10 +506,16 @@ def propagate(graph, consts):
 			#	t = filter(t, TFunc)
 			#	recurse = not (types[node] >= t)
 			#	types[node] |= t
+			#Propagates the current types to a specific parameter of function types
 			elif label[:3] == "arg":
 				print "arg label"
 				pos = int(label[4:])
 				t = set([TFunc((TNone(),)*pos + (typ,), TNone()) for typ in t])
+				recurse = not (types[node] >= t)
+				types[node] |= t
+			#Propagates a specific parameter of function types to the destination
+			elif label[:6] == "up_arg":
+				t = getParam(t, int(label[7:]))
 				recurse = not (types[node] >= t)
 				types[node] |= t
 			else:
