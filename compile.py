@@ -212,16 +212,13 @@ def compile(ast):
 	typeAnno = {}
 	debugInfo.lines(ast, lines)
 	debugInfo.types(ast, typeAnno)
-	print lines
-	print typeAnno
-	astpp.printAst(ast)
 	
 	types = analysis.runAnalysis(ast)
 	types = {k:analysis.simplify(v) for k,v in types.iteritems()}
-	print "Types:",types
-	analysis.printReport(types, names, lines, False)
+	#print "Types:",types
+	#analysis.printReport(types, names, lines, False)
 	assertTypes = {k:v for k,v in typeAnno.iteritems() if not analysis.checkSoundness(typeAnno[k], types[k], names[k], lines[k])}
-	print "Types that need to have runtime checks:",assertTypes
+	#print "Types that need to have runtime checks:",assertTypes
 	analysis.addAssert(ast, assertTypes)
 	
 	printd(separator("Explicate Pass"))
