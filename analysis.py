@@ -421,13 +421,11 @@ def propagate(graph, consts):
 				simple = ints + bools
 				big = lists + dicts + funcs
 				if simple > 0 and big == 0:
-					print "some simple, no big"
 					#int/bool + ? -> int | ?
 					tint = TInt()
 					recurse = tint not in types[node]
 					types[node].add(tint)
 				elif simple == 0 and big > 0:
-					print "some big, no simple"
 					#Give it TList(TAny) if any non-list bigs are possible
 					if dicts + funcs > 0:
 						tlist = TList(TAny())
@@ -438,7 +436,6 @@ def propagate(graph, consts):
 						recurse = not (types[node] >= t)
 						types[node] |= t
 				else:
-					print "both possible"
 					#Both are possible, just give up on accuracy
 					recurse = not (types[node] >= t)
 					types[node] |= t
@@ -487,15 +484,11 @@ def propagate(graph, consts):
 				types[node] |= t
 			#Propagates the return types of the function types
 			elif label == "return":
-				print "return label found"
-				print t
 				t = getReturns(t)
 				recurse = not (types[node] >= t)
 				types[node] |= t
 			#Propagates the current types to the function types
 			elif label == "up_return":
-				print "up_return label found"
-				print t
 				t = set([TFunc((),typ) for typ in t])
 				recurse = not (types[node] >= t)
 				types[node] |= t
@@ -508,7 +501,6 @@ def propagate(graph, consts):
 			#	types[node] |= t
 			#Propagates the current types to a specific parameter of function types
 			elif label[:3] == "arg":
-				print "arg label"
 				pos = int(label[4:])
 				t = set([TFunc((TNone(),)*pos + (typ,), TNone()) for typ in t])
 				recurse = not (types[node] >= t)
@@ -522,10 +514,6 @@ def propagate(graph, consts):
 				print "label not recognized: "+label
 		#Simply add the types
 		elif t != types[node]:
-			debug = False
-			if debug:			
-				print "simple case"
-				print t
 			recurse = not (types[node] >= t)
 			types[node] |= t
 		
