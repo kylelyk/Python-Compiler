@@ -347,7 +347,7 @@ def runAnalysis(ast):
 	
 	analyze(ast.node, constGraph, constTypes, gens, None)
 	print constGraph
-	propagate(constGraph, constTypes)
+	return propagate(constGraph, constTypes)
 
 #Returns whether there any are big types
 def anyBig(set):
