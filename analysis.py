@@ -702,7 +702,7 @@ def addAssertStmt(ast, assert_dict):
 
 def addAssertAssign(ast, assert_dict):
 	if(isinstance(ast.nodes[0], Subscript)):
-		return ast
+		return
 	name = ast.nodes[0].name
 	#Need to add runtime check
 	if name in assert_dict:
