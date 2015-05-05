@@ -56,47 +56,45 @@ int is_bound_method(pyobj val) {
   return is_big(val) && (project_big(val)->tag == BMETHOD);
 }
 
-static void assert_type(pyobj x, char* type, int lineno = 0){
-	assert(0);
-	/*switch(type){
-		case "INT":
-			is_type = is_int(x);
-			break;
-		case "BOOL":
-			is_type = is_bool(x);
-			break;
-		case "LIST": {
-			if (!is_big(x)){ 
-				is_type = 0;
-			}
-			else{
-				big_pyobj* b = project_big(x);
-				is_type = (b->tag == LIST);
-			}
-			break;
-		}
-		case "DICT": {
-			if (!is_big(x)){ 
-				is_type = 0;
-			}
-			else{
-				big_pyobj* b = project_big(x);
-				is_type = (b->tag == DICT);
-			}
-			break;
-		}
-		case "FUNC":
-			is_type = is_function(x);
-			break;
-		default:
-			printf("Usage Error in assert_type. type argument must be: INT, BOOL, LIST, DICT, or FUNC");
-			assert(0);
+void assert_type(pyobj x, char* type, int lineno){
+	int is_type = 1;
+	if (!strcmp(type,"INT")){
+		is_type = is_int(x);
 	}
+	
+	if (!strcmp(type,"BOOL")){
+		is_type = is_bool(x);
+	}
+
+	if (!strcmp(type,"LIST")){
+		if (!is_big(x)){ 
+				is_type = 0;
+			}
+		else{
+			big_pyobj* b = project_big(x);
+			is_type = (b->tag == LIST);
+		}
+	}
+	
+	if (!strcmp(type,"DICT")){
+		if (!is_big(x)){ 
+				is_type = 0;
+			}
+		else{
+			big_pyobj* b = project_big(x);
+			is_type = (b->tag == DICT);
+		}
+	}
+	
+	if (!strcmp(type,"FUNC")){ 
+		is_type = is_function(x);
+	}
+	
 	if(!is_type){
 		printf("Type error at line %d. Assigned variable did not have expected type %s.", lineno, type);
 		assert(0);
 	} 
-	*/	
+	
 }
 
 /*
