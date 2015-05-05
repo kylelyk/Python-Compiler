@@ -58,7 +58,7 @@ int is_bound_method(pyobj val) {
 
 static void assert_type(pyobj x, char* type, int lineno = 0){
 	int is_type = 1;
-	switch(type){
+	/*switch(type){
 		case "INT":
 			is_type = is_int(x);
 			break;
@@ -96,7 +96,7 @@ static void assert_type(pyobj x, char* type, int lineno = 0){
 		printf("Type error at line %d. Assigned variable did not have expected type %s.", lineno, type);
 		assert(0);
 	} 
-	
+	*/	
 }
 
 /*
